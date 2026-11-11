@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>נחש את הלהיט</title>
+<meta name="theme-color" content="#140a33">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Secular+One&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<style>
+:root{--bg:#140a33;--bg2:#090418;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--gold:#FFC83D;--pink:#FF4F9A;--teal:#2EE6B5;--violet:#8B7BFF;--orange:#FF7A3D;--txt:#fff;--mut:#b9b0e8}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+html{background:#090418}
+body{font-family:Rubik,system-ui,sans-serif;color:var(--txt);background:radial-gradient(ellipse at 50% -10%,#3a1d8a 0%,var(--bg) 45%,var(--bg2) 100%) fixed;overflow-x:hidden;min-height:100vh}
+h1,h2,h3,.disp{font-family:'Secular One',Rubik,sans-serif;font-weight:400;margin:0}
+button{font-family:inherit;cursor:pointer;border:0;color:inherit}
+input{font-family:inherit}
+.stage{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.beam{position:absolute;top:-20%;width:46vw;height:140vh;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,0) 70%);filter:blur(6px);transform-origin:50% 0;clip-path:polygon(45% 0,55% 0,100% 100%,0 100%)}
+.beam.b1{left:0;animation:sway 7s ease-in-out infinite;background:linear-gradient(180deg,rgba(255,79,154,.28),transparent 70%)}
+.beam.b2{right:0;animation:sway 8s ease-in-out infinite reverse;background:linear-gradient(180deg,rgba(46,230,181,.22),transparent 70%)}
+.beam.b3{left:27vw;animation:sway 10s ease-in-out infinite;background:linear-gradient(180deg,rgba(255,200,61,.18),transparent 70%)}
+@keyframes sway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+.note{position:absolute;bottom:-40px;font-size:22px;opacity:.35;animation:floatUp linear infinite}
+@keyframes floatUp{to{transform:translateY(-115vh) rotate(40deg);opacity:0}}
+#app{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:14px 14px 40px;min-height:100vh}
+.screen{display:none;animation:pop .35s ease}
+.screen.on{display:block}
+@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.logo{text-align:center;margin:18px 0 8px}
+.logo h1{font-size:44px;line-height:1;background:linear-gradient(90deg,var(--gold),var(--pink),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 rgba(0,0,0,.35));transform:rotate(-3deg)}
+.logo .tag{color:var(--mut);margin-top:8px;font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;backdrop-filter:blur(6px);margin:12px 0}
+.big-btn{display:block;width:100%;padding:16px;border-radius:18px;font-size:20px;font-family:'Secular One';margin-top:12px;box-shadow:0 5px 0 rgba(0,0,0,.35);transition:transform .08s}
+.big-btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.gold{background:var(--gold);color:#3b2400}
+.pink{background:var(--pink);color:#fff}
+.teal{background:var(--teal);color:#053b2e}
+.violet{background:var(--violet);color:#fff}
+.ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid var(--line)}
+.small-btn{padding:9px 14px;border-radius:12px;font-size:14px;background:rgba(255,255,255,.12);border:1px solid var(--line)}
+.inp{width:100%;padding:14px 16px;border-radius:16px;border:2px solid #5a4bd1;background:rgba(20,10,60,.75);color:#fff;font-size:18px;outline:none;margin-top:10px;transition:border-color .2s}
+.inp:focus{border-color:var(--gold)}
+.inp::placeholder{color:#8f86c9}
+.err{color:#ff8fa3;font-size:14px;min-height:18px;margin-top:6px}
+.vinyl{width:150px;height:150px;border-radius:50%;margin:10px auto;background:radial-gradient(circle,#111 0 5%,var(--pink) 5.5% 22%,#111 22.5% 25%,#1a1a1a 25% 100%);box-shadow:0 0 0 4px #000,0 10px 30px rgba(0,0,0,.5);position:relative}
+.vinyl::after{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 6px,rgba(255,255,255,.05) 6px 7px);}
+.vinyl::before{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.18),transparent 40%);z-index:1}
+.spin{animation:spin 2.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.row{display:flex;gap:10px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.code{font-family:'Secular One';font-size:46px;letter-spacing:8px;text-align:center;color:var(--gold);direction:ltr}
+.mut{color:var(--mut)}
+.center{text-align:center}
+.plist{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pchip{display:flex;align-items:center;gap:6px;padding:7px 12px 7px 10px;border-radius:30px;font-weight:500;font-size:15px;background:rgba(255,255,255,.1);border:1px solid var(--line)}
+.pchip .av{font-size:18px}
+.pchip.off{opacity:.4}
+.pchip.cur{background:var(--gold);color:#3b2400;border-color:var(--gold);transform:scale(1.06)}
+.pchip .sc{background:rgba(0,0,0,.25);border-radius:10px;padding:1px 7px;font-size:13px}
+.cats-h{font-size:14px;color:var(--mut);margin:12px 2px 6px}
+.cat{padding:14px 10px;border-radius:16px;font-family:'Secular One';font-size:17px;text-align:center;border:3px solid transparent;transition:transform .15s;position:relative}
+.cat small{display:block;font-family:Rubik;font-size:12px;opacity:.85;margin-top:2px}
+.cat.sel{border-color:#fff;transform:scale(1.04);box-shadow:0 0 0 3px var(--gold)}
+.cat.dis{pointer-events:none}
+.stepper{display:flex;align-items:center;gap:12px;justify-content:center;margin-top:6px}
+.stepper button{width:42px;height:42px;border-radius:50%;font-size:22px;background:rgba(255,255,255,.12)}
+.stepper b{font-size:26px;min-width:30px;text-align:center}
+.topbar{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--mut)}
+.scores{display:flex;gap:8px;overflow-x:auto;padding:8px 2px;scrollbar-width:none}
+.scores::-webkit-scrollbar{display:none}
+.scores .pchip{flex-shrink:0}
+.turnlbl{text-align:center;font-family:'Secular One';font-size:24px;margin:6px 0 2px}
+.turnlbl .nm{color:var(--gold)}
+.player-box{display:flex;align-items:center;gap:14px;margin-top:8px}
+.player-box .vinyl{width:110px;height:110px;margin:0;flex-shrink:0}
+.eq{display:flex;align-items:flex-end;gap:4px;height:48px;flex:1}
+.eq i{flex:1;background:linear-gradient(0deg,var(--teal),var(--violet));border-radius:3px;height:15%;transition:height .2s}
+.eq.on i{animation:eq .9s ease-in-out infinite}
+@keyframes eq{0%,100%{height:15%}50%{height:100%}}
+.timer{height:10px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin-top:10px}
+.timer div{height:100%;background:linear-gradient(90deg,var(--teal),var(--gold),var(--pink));border-radius:6px;width:100%}
+.tsec{font-size:13px;color:var(--mut);margin-top:4px;display:flex;justify-content:space-between}
+.lls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.ll{border-radius:18px;padding:10px 4px 8px;background:linear-gradient(180deg,#3b2b9a,#261a6e);border:2px solid #6b5cf0;text-align:center;font-size:12.5px;line-height:1.2;position:relative;transition:transform .1s}
+.ll .ic{font-size:26px;display:block;margin-bottom:3px}
+.ll:active{transform:scale(.95)}
+.ll.used{filter:grayscale(1);opacity:.35;pointer-events:none}
+.ll.used::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;color:#ff4f6d;opacity:.9}
+.mc{display:grid;gap:8px;margin-top:10px}
+.mc button{padding:13px;border-radius:14px;background:rgba(255,255,255,.1);border:2px solid var(--line);font-size:16px;text-align:right}
+.mc button b{color:var(--gold);margin-left:8px}
+.bubble{background:#fff;color:#26215C;border-radius:18px;padding:10px 14px;font-weight:500;position:relative;margin-top:10px;font-size:16px}
+.bubble small{display:block;color:#7a72b8;font-weight:400;font-size:12px}
+.log{font-size:13px;color:var(--mut);margin-top:10px;min-height:18px;text-align:center}
+.reactions{display:flex;justify-content:center;gap:8px;margin-top:12px}
+.reactions button{font-size:24px;background:rgba(255,255,255,.08);border-radius:50%;width:46px;height:46px}
+.fly{position:fixed;bottom:80px;font-size:38px;z-index:50;pointer-events:none;animation:fly 2.4s ease-out forwards;text-align:center}
+.fly small{display:block;font-size:12px;background:rgba(0,0,0,.4);border-radius:8px;padding:1px 6px}
+@keyframes fly{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1;transform:translateY(-30px) scale(1.2)}100%{transform:translateY(-60vh) scale(1);opacity:0}}
+.singer-wrap{text-align:center;position:relative}
+.singer{width:190px;height:220px;display:block;margin:0 auto}
+.singer.bounce{animation:bounce .7s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+.singer.shake{animation:shake .5s ease-in-out 3}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px) rotate(-3deg)}75%{transform:translateX(8px) rotate(3deg)}}
+.singer .m-sad{display:none}
+.singer.sad .m-sad{display:inline}
+.singer.sad .m-happy{display:none}
+.singer.sad .tear{display:inline}
+.singer .tear{display:none}
+.singer .mouth{transform-origin:100px 118px;transform-box:view-box}
+.singer.talk .mouth{animation:talk .18s ease-in-out infinite alternate}
+@keyframes talk{from{transform:scaleY(.35)}to{transform:scaleY(1.15)}}
+.singer .spark{animation:twinkle 1.2s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.1)}}
+.speech{display:inline-block;background:#fff;color:#26215C;border-radius:22px;padding:12px 20px;font-family:'Secular One';font-size:26px;margin-top:-6px;position:relative;animation:popIn .5s cubic-bezier(.3,1.6,.5,1)}
+.speech::before{content:"";position:absolute;top:-12px;left:50%;margin-left:-12px;border:12px solid transparent;border-bottom-color:#fff;border-top:0}
+@keyframes popIn{from{transform:scale(0) rotate(-10deg)}to{transform:none}}
+.answer-reveal{margin-top:14px;font-size:15px}
+.answer-reveal .song{font-family:'Secular One';font-size:22px;color:var(--gold)}
+.answer-reveal .art{font-size:17px}
+.res-line{display:flex;justify-content:center;gap:14px;margin-top:8px;font-size:14px;flex-wrap:wrap}
+.ok{color:var(--teal)}.no{color:#ff7b93}
+.pts{font-family:'Secular One';font-size:30px;color:var(--teal);margin-top:6px;animation:popIn .6s cubic-bezier(.3,1.6,.5,1)}
+.modal{position:fixed;inset:0;background:rgba(5,2,20,.78);z-index:60;display:none;align-items:center;justify-content:center;padding:18px}
+.modal.on{display:flex}
+.modal .card{width:100%;max-width:420px;background:#22145a;animation:popIn .4s cubic-bezier(.3,1.6,.5,1)}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-top:16px}
+.pod{width:31%;text-align:center}
+.pod .blk{border-radius:14px 14px 4px 4px;padding-top:8px;font-family:'Secular One';font-size:30px}
+.pod .nm{font-weight:700;margin-bottom:6px;font-size:15px;word-break:break-word}
+.pod .av{font-size:34px}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#fff;color:#26215C;padding:10px 18px;border-radius:14px;font-weight:500;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:popIn .3s ease;max-width:90vw;text-align:center}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:70}
+.tap-audio{display:none;margin-top:10px}
+.tap-audio.on{display:block}
+.spinner{width:60px;height:60px;border:6px solid rgba(255,255,255,.15);border-top-color:var(--gold);border-radius:50%;margin:20px auto;animation:spin 1s linear infinite}
+.progress{height:14px;background:rgba(255,255,255,.1);border-radius:8px;overflow:hidden;margin-top:14px}
+.progress div{height:100%;width:0;background:linear-gradient(90deg,var(--pink),var(--gold));transition:width .3s}
+.hidden{display:none!important}
+.helper{font-size:12px;color:var(--mut);text-align:center;margin-top:16px;line-height:1.5}
+a{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="stage" id="stage"><div class="beam b1"></div><div class="beam b2"></div><div class="beam b3"></div></div>
+<canvas id="confetti"></canvas>
+<div id="app">
+
+<!-- שם -->
+<section class="screen" id="s-name">
+  <div class="logo"><h1>נחש את הלהיט</h1><div class="tag">טריוויה מוזיקלית לכל החבר'ה</div></div>
+  <div class="vinyl spin"></div>
+  <div class="card">
+    <h3>איך קוראים לך?</h3>
+    <input class="inp" id="nameInp" maxlength="14" placeholder="השם שלך" autocomplete="off">
+    <div class="err" id="nameErr"></div>
+    <button class="big-btn gold" id="nameBtn">יאללה, מתחילים</button>
+  </div>
+</section>
+
+<!-- בית -->
+<section class="screen" id="s-home">
+  <div class="logo"><h1>נחש את הלהיט</h1><div class="tag">שלום, <b id="homeName"></b>! <button class="small-btn" id="chgName" style="padding:3px 9px;font-size:12px">החלף שם</button></div></div>
+  <div class="vinyl spin"></div>
+  <div class="card">
+    <button class="big-btn gold" id="createBtn">צור חדר חדש</button>
+    <div class="cats-h center" style="margin-top:18px">או הצטרף לחדר של חבר</div>
+    <div class="row"><input class="inp" id="codeInp" maxlength="4" placeholder="קוד חדר" style="text-align:center;letter-spacing:6px;direction:ltr;text-transform:uppercase;margin-top:0"><button class="big-btn teal" id="joinBtn" style="width:auto;margin-top:0;padding:14px 22px">הצטרף</button></div>
+    <div class="err" id="homeErr"></div>
+  </div>
+  <div class="helper">כל אחד משחק מהטלפון שלו. יוצרים חדר, שולחים לחברים את הקישור, ומנחשים להיטים בתורות.</div>
+</section>
+
+<!-- התחברות -->
+<section class="screen" id="s-connect">
+  <div class="logo"><h1>נחש את הלהיט</h1></div>
+  <div class="spinner"></div>
+  <div class="center disp" style="font-size:22px" id="connectMsg">מתחברים לחדר...</div>
+</section>
+
+<!-- לובי -->
+<section class="screen" id="s-lobby">
+  <div class="topbar"><button class="small-btn" id="leaveLobby">יציאה</button><span>חדר משחק</span></div>
+  <div class="card center">
+    <div class="mut">קוד החדר</div>
+    <div class="code" id="roomCode">----</div>
+    <div class="row" style="justify-content:center;flex-wrap:wrap">
+      <button class="small-btn" id="copyLink">העתק קישור</button>
+      <a class="small-btn" id="waLink" target="_blank" rel="noopener" style="text-decoration:none;color:#fff">שלח בוואטסאפ</a>
+    </div>
+  </div>
+  <div class="card">
+    <h3>שחקנים <span class="mut" id="pCount"></span></h3>
+    <div class="plist" id="lobbyPlayers"></div>
+  </div>
+  <div class="card">
+    <h3>בחרו תקופה</h3>
+    <div class="cats-h">להיטים לועזיים</div>
+    <div class="grid2" id="catsIntl"></div>
+    <div class="cats-h">להיטים ישראליים</div>
+    <div class="grid2" id="catsIl"></div>
+    <div class="cats-h center" style="margin-top:16px">שירים לכל שחקן</div>
+    <div class="stepper"><button id="rMinus">−</button><b id="roundsVal">3</b><button id="rPlus">+</button></div>
+  </div>
+  <button class="big-btn gold" id="startBtn">התחל משחק</button>
+  <div class="center mut" id="waitHost" style="margin-top:14px">מחכים שהמארח יתחיל...</div>
+</section>
+
+<!-- טעינה -->
+<section class="screen" id="s-loading">
+  <div class="logo"><h1>נחש את הלהיט</h1></div>
+  <div class="vinyl spin"></div>
+  <div class="center disp" style="font-size:22px" id="loadMsg">מכוונים את התקליטים...</div>
+  <div class="progress"><div id="loadBar"></div></div>
+</section>
+
+<!-- משחק -->
+<section class="screen" id="s-game">
+  <div class="topbar"><button class="small-btn" id="leaveGame">יציאה</button><span id="turnInfo"></span><span id="catInfo"></span></div>
+  <div class="scores" id="scores"></div>
+
+  <div id="turnPane">
+    <div class="turnlbl" id="turnLbl"></div>
+    <div class="card" style="padding:14px">
+      <div class="player-box">
+        <div class="vinyl" id="gVinyl"></div>
+        <div style="flex:1">
+          <div class="eq" id="eq"></div>
+          <div class="timer"><div id="tbar"></div></div>
+          <div class="tsec"><span id="tsec"></span><button class="small-btn" id="replayBtn" style="padding:4px 10px;font-size:12px">השמע שוב</button></div>
+        </div>
+      </div>
+      <button class="big-btn pink tap-audio" id="tapAudio">הקש כדי לשמוע</button>
+      <div id="ansArea">
+        <input class="inp" id="aTitle" placeholder="שם השיר" autocomplete="off">
+        <input class="inp" id="aArtist" placeholder="מי השר/ה או הלהקה" autocomplete="off">
+        <div class="err" id="ansErr"></div>
+        <button class="big-btn teal" id="sendAns" style="margin-top:6px">שלח תשובה</button>
+        <div class="mc" id="mcBox"></div>
+        <div class="lls" id="lls">
+          <button class="ll" data-ll="mc"><span class="ic">🎯</span>4 תשובות</button>
+          <button class="ll" data-ll="more"><span class="ic">🎵</span>עוד שיר של האמן</button>
+          <button class="ll" data-ll="friend"><span class="ic">🤝</span>עזרה מחבר</button>
+        </div>
+      </div>
+      <div id="helpBubble"></div>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="reactions" id="reactBar"></div>
+  </div>
+
+  <div id="revealPane" class="hidden">
+    <div class="singer-wrap" id="singerWrap"></div>
+    <div class="center"><div class="speech" id="speech"></div></div>
+    <div class="card center answer-reveal">
+      <div class="mut">התשובה הנכונה</div>
+      <div class="song" id="rvSong"></div>
+      <div class="art" id="rvArt"></div>
+      <div class="res-line" id="rvRes"></div>
+      <div class="pts" id="rvPts"></div>
+      <div class="mut" id="rvExtra" style="font-size:13px;margin-top:4px"></div>
+    </div>
+    <button class="big-btn gold" id="nextBtn">לשיר הבא</button>
+    <button class="big-btn ghost hidden" id="overrideBtn" style="font-size:15px;padding:11px">בעצם צדק/ה – תן נקודות</button>
+    <div class="center mut" id="nextHint" style="font-size:13px;margin-top:8px"></div>
+  </div>
+</section>
+
+<!-- סוף -->
+<section class="screen" id="s-end">
+  <div class="logo"><h1>סוף המשחק!</h1></div>
+  <div class="singer-wrap" id="endSinger"></div>
+  <div class="center"><div class="speech" id="endSpeech"></div></div>
+  <div class="podium" id="podium"></div>
+  <div class="card" id="endList"></div>
+  <button class="big-btn gold" id="againBtn">עוד משחק</button>
+  <button class="big-btn ghost" id="exitBtn">יציאה</button>
+</section>
+</div>
+
+<!-- עזרה מחבר -->
+<div class="modal" id="helpModal"><div class="card center">
+  <div style="font-size:44px">🤝</div>
+  <h2 id="helpTitle"></h2>
+  <div class="mut" style="margin-top:6px">תקשיבו לשיר ותכתבו מה לדעתכם זה. יש לכם <b id="helpSec">20</b> שניות</div>
+  <input class="inp" id="helpInp" placeholder="שם השיר / האמן" autocomplete="off">
+  <div class="err" id="helpErr"></div>
+  <button class="big-btn teal" id="helpSend">שלח עזרה</button>
+</div></div>
+
+<!-- בחירת חבר -->
+<div class="modal" id="friendPick"><div class="card center">
+  <h2>את מי לשאול?</h2>
+  <div class="plist" id="friendList" style="justify-content:center"></div>
+  <button class="big-btn ghost" id="friendCancel">ביטול</button>
+</div></div>
+
+<audio id="aud" preload="auto"></audio>
+
+<script>
+"use strict";
+/* ========== נתונים ========== */
+const INTL=[
+ {id:'i60',label:'שנות ה-60',color:'#FF4F9A',list:[
+  ['Hey Jude','The Beatles','הביטלס'],["(I Can't Get No) Satisfaction",'The Rolling Stones','הרולינג סטונס'],['My Girl','The Temptations','הטמפטיישנס'],['Stand by Me','Ben E. King','בן אי קינג'],['Respect','Aretha Franklin',"ארית'ה פרנקלין"],['Good Vibrations','The Beach Boys',"הביץ' בויז"],['Light My Fire','The Doors','הדורס'],['The House of the Rising Sun','The Animals','האנימלס'],['Oh, Pretty Woman','Roy Orbison','רוי אורביסון'],['I Got You Babe','Sonny & Cher','סוני ושר'],['Be My Baby','The Ronettes','הרונטס'],["Can't Help Falling in Love",'Elvis Presley','אלביס פרסלי'],['Twist and Shout','The Beatles','הביטלס'],['Mrs. Robinson','Simon & Garfunkel','סיימון וגרפונקל'],['The Sound of Silence','Simon & Garfunkel','סיימון וגרפונקל'],["Ain't No Mountain High Enough",'Marvin Gaye & Tammi Terrell','מרווין גיי'],['I Heard It Through the Grapevine','Marvin Gaye','מרווין גיי'],['What a Wonderful World','Louis Armstrong','לואי ארמסטרונג'],["California Dreamin'",'The Mamas & The Papas','המאמאס והפאפאס'],['Sweet Caroline','Neil Diamond','ניל דיימונד'],['Daydream Believer','The Monkees','המאנקיז'],['Born to Be Wild','Steppenwolf','סטפנוולף'],['Brown Eyed Girl','Van Morrison','ואן מוריסון'],['Unchained Melody','The Righteous Brothers',"הרייצ'ס ברדרס"],['Help!','The Beatles','הביטלס']]},
+ {id:'i70',label:'שנות ה-70',color:'#2EE6B5',list:[
+  ['Bohemian Rhapsody','Queen','קווין'],['Hotel California','Eagles','האיגלס'],["Stayin' Alive",'Bee Gees',"הבי ג'יז"],['Dancing Queen','ABBA','אבבא'],['Le Freak','Chic','שיק'],['I Will Survive','Gloria Gaynor','גלוריה גיינור'],['Imagine','John Lennon',"ג'ון לנון"],['Superstition','Stevie Wonder','סטיבי וונדר'],['Dream On','Aerosmith',"אירוסמית'"],['Stairway to Heaven','Led Zeppelin','לד זפלין'],['Go Your Own Way','Fleetwood Mac','פליטווד מק'],['Sweet Home Alabama','Lynyrd Skynyrd','לינרד סקינרד'],['Y.M.C.A.','Village People',"וילג' פיפל"],["Don't Stop Me Now",'Queen','קווין'],['Heart of Glass','Blondie','בלונדי'],['Born to Run','Bruce Springsteen','ברוס ספרינגסטין'],['September','Earth, Wind & Fire',"ארת' ווינד אנד פייר"],['Rivers of Babylon','Boney M.','בוני אם'],['Daddy Cool','Boney M.','בוני אם'],['Waterloo','ABBA','אבבא'],['Highway to Hell','AC/DC','איי סי די סי'],['Another Brick in the Wall','Pink Floyd','פינק פלויד'],['Your Song','Elton John',"אלטון ג'ון"],['Killing Me Softly with His Song','Roberta Flack','רוברטה פלאק'],['Let It Be','The Beatles','הביטלס']]},
+ {id:'i80',label:'שנות ה-80',color:'#8B7BFF',list:[
+  ['Billie Jean','Michael Jackson',"מייקל ג'קסון"],['Thriller','Michael Jackson',"מייקל ג'קסון"],['Like a Prayer','Madonna','מדונה'],["Sweet Child O' Mine","Guns N' Roses",'גאנז אנד רוזס'],["Livin' on a Prayer",'Bon Jovi',"בון ג'ובי"],['Take On Me','a-ha','אהה'],["Don't Stop Believin'",'Journey',"ג'רני"],['Every Breath You Take','The Police','הפוליס'],['Girls Just Want to Have Fun','Cyndi Lauper','סינדי לופר'],['Wake Me Up Before You Go-Go','Wham!','ווהם'],['Africa','Toto','טוטו'],['Eye of the Tiger','Survivor','סרבייבר'],['Beat It','Michael Jackson',"מייקל ג'קסון"],['Footloose','Kenny Loggins','קני לוגינס'],['Under Pressure','Queen & David Bowie','קווין'],['Never Gonna Give You Up','Rick Astley','ריק אסטלי'],['Walk Like an Egyptian','The Bangles','הבנגלס'],['Tainted Love','Soft Cell','סופט סל'],['The Final Countdown','Europe','יורופ'],['Jump','Van Halen','ואן היילן'],['With or Without You','U2','יו טו'],['I Wanna Dance with Somebody','Whitney Houston','ויטני יוסטון'],['Total Eclipse of the Heart','Bonnie Tyler','בוני טיילר'],['Ghostbusters','Ray Parker Jr.',"ריי פארקר ג'וניור"],['Purple Rain','Prince','פרינס']]},
+ {id:'i90',label:'שנות ה-90',color:'#FF7A3D',list:[
+  ['Smells Like Teen Spirit','Nirvana','נירוונה'],['Wonderwall','Oasis','אואזיס'],['...Baby One More Time','Britney Spears','בריטני ספירס'],['I Will Always Love You','Whitney Houston','ויטני יוסטון'],['Wannabe','Spice Girls','הספייס גירלז'],['Losing My Religion','R.E.M.','אר אי אם'],['Macarena','Los Del Rio','לוס דל ריו'],['My Heart Will Go On','Celine Dion','סלין דיון'],["Livin' la Vida Loca",'Ricky Martin','ריקי מרטין'],['Black or White','Michael Jackson',"מייקל ג'קסון"],['Zombie','The Cranberries','הקרנבריז'],['Barbie Girl','Aqua','אקווה'],['No Scrubs','TLC','טי אל סי'],["Gangsta's Paradise",'Coolio','קוליו'],['Torn','Natalie Imbruglia','נטלי אימברוליה'],["Everybody (Backstreet's Back)",'Backstreet Boys','בקסטריט בויז'],['I Want It That Way','Backstreet Boys','בקסטריט בויז'],['Bitter Sweet Symphony','The Verve','דה ורב'],['Vogue','Madonna','מדונה'],['Creep','Radiohead','רדיוהד'],['Believe','Cher','שר'],['Mambo No. 5','Lou Bega','לו בגה'],['Killing Me Softly','Fugees','הפוג׳יז'],['Enter Sandman','Metallica','מטאליקה'],['Waterfalls','TLC','טי אל סי']]},
+ {id:'i00',label:'שנות ה-2000',color:'#FFC83D',list:[
+  ['Crazy in Love','Beyoncé','ביונסה'],['Hey Ya!','Outkast','אאוטקאסט'],['In Da Club','50 Cent','פיפטי סנט'],['Umbrella','Rihanna','ריהאנה'],['Toxic','Britney Spears','בריטני ספירס'],['Mr. Brightside','The Killers','הקילרס'],["Hips Don't Lie",'Shakira','שאקירה'],['Yeah!','Usher','אשר'],['Seven Nation Army','The White Stripes','הווייט סטרייפס'],['Poker Face','Lady Gaga','ליידי גאגא'],['Viva la Vida','Coldplay','קולדפליי'],['Clocks','Coldplay','קולדפליי'],['Lose Yourself','Eminem','אמינם'],['Rehab','Amy Winehouse','איימי וויינהאוס'],['Crazy','Gnarls Barkley','נארלס בארקלי'],['Since U Been Gone','Kelly Clarkson','קלי קלרקסון'],['I Gotta Feeling','Black Eyed Peas','בלאק אייד פיז'],['Complicated','Avril Lavigne','אבריל לאבין'],['Bad Day','Daniel Powter','דניאל פאוטר'],['Beautiful Day','U2','יו טו'],['Single Ladies (Put a Ring on It)','Beyoncé','ביונסה'],["Hot N Cold",'Katy Perry','קייטי פרי'],['Use Somebody','Kings of Leon','קינגס אוף ליאון'],["Can't Get You Out of My Head",'Kylie Minogue','קיילי מינוג'],['Feel Good Inc.','Gorillaz','גורילז']]},
+ {id:'i10',label:'שנות ה-2010',color:'#5EC8FF',list:[
+  ['Uptown Funk','Mark Ronson','מארק רונסון'],['Shape of You','Ed Sheeran','אד שירן'],['Rolling in the Deep','Adele','אדל'],['Happy','Pharrell Williams','פארל וויליאמס'],['Despacito','Luis Fonsi','לואיס פונסי'],['Blinding Lights','The Weeknd','דה וויקנד'],['Someone Like You','Adele','אדל'],['Shake It Off','Taylor Swift','טיילור סוויפט'],['Get Lucky','Daft Punk','דאפט פאנק'],['Call Me Maybe','Carly Rae Jepsen',"קרלי ריי ג'פסן"],['Royals','Lorde','לורד'],['Thinking Out Loud','Ed Sheeran','אד שירן'],['Counting Stars','OneRepublic','וואן ריפבליק'],['Party Rock Anthem','LMFAO','אל אם אף איי או'],['Gangnam Style','PSY','סאי'],['bad guy','Billie Eilish','בילי אייליש'],['Old Town Road','Lil Nas X','ליל נאס אקס'],['Moves Like Jagger','Maroon 5','מארון 5'],['Sorry','Justin Bieber',"ג'סטין ביבר"],['Hello','Adele','אדל'],['Shallow','Lady Gaga','ליידי גאגא'],['Wake Me Up','Avicii','אביצ׳י'],['Radioactive','Imagine Dragons','אימג׳ין דרגונס'],['Hotline Bling','Drake','דרייק'],['Titanium','David Guetta','דיוויד גואטה']]}
+];
+const ISR=[
+ {id:'il70',label:'ה-60 וה-70',color:'#FF4F9A',artists:[['אריק איינשטיין','Arik Einstein'],['כוורת','Kaveret'],['שלמה ארצי','Shlomo Artzi'],['חוה אלברשטיין','Chava Alberstein'],['נעמי שמר','Naomi Shemer'],['יהורם גאון','Yehoram Gaon'],['הדודאים','HaDudaim'],['אילנית','Ilanit'],['גלי עטרי','Gali Atari'],['מתי כספי','Matti Caspi'],['שמוליק קראוס','Shmulik Kraus'],['הפרברים','HaParvarim'],['אריק לביא','Arik Lavie'],['שלום חנוך','Shalom Hanoch'],['צביקה פיק','Svika Pick']]},
+ {id:'il80',label:'שנות ה-80',color:'#8B7BFF',artists:[['זוהר ארגוב','Zohar Argov'],['עפרה חזה','Ofra Haza'],['משינה','Mashina'],['ריטה','Rita'],['יהודית רביץ','Yehudit Ravitz'],['יהודה פוליקר','Yehuda Poliker'],['גידי גוב','Gidi Gov'],['חיים משה','Haim Moshe'],['טיסלם','Tislam'],['אביהו מדינה','Avihu Medina'],['דני סנדרסון','Danny Sanderson'],["ג'וזי כץ",'Josie Katz'],['דני רובס','Danny Robas'],['בנזין','Benzin']]},
+ {id:'il90',label:'שנות ה-90',color:'#FF7A3D',artists:[['אביב גפן','Aviv Geffen'],['זהבה בן','Zehava Ben'],['רמי קלינשטיין','Rami Kleinstein'],['אתניקס','Ethnix'],['דנה אינטרנשיונל','Dana International'],['עברי לידר','Ivri Lider'],['אהוד בנאי','Ehud Banai'],['שרית חדד','Sarit Hadad'],['אייל גולן','Eyal Golan'],['היהודים','HaYehudim'],['מאיר בנאי','Meir Banai'],['קורין אלאל','Corinne Allal'],['אתי אנקרי','Etti Ankri'],['נורית גלרון','Nurit Galron']]},
+ {id:'il00',label:'שנות ה-2000',color:'#FFC83D',artists:[['הדג נחש','Hadag Nahash'],['שלומי שבת','Shlomi Shabat'],['משה פרץ','Moshe Peretz'],['הראל סקעת','Harel Skaat'],['שירי מימון','Shiri Maimon'],['כנסיית השכל','Knesiyat Hasekel'],['מוש בן ארי','Mosh Ben Ari'],['אביתר בנאי','Evyatar Banai'],['קרן פלס','Keren Peles'],['אמיר בניון','Amir Benayoun'],['דודו טסה','Dudu Tassa'],['טיפקס','Teapacks'],['שב"ק ס','Shabak Samech'],['הפרויקט של עידן רייכל','The Idan Raichel Project']]},
+ {id:'il10',label:'שנות ה-2010',color:'#2EE6B5',artists:[['עומר אדם','Omer Adam'],['סטטיק ובן אל תבורי','Static & Ben El Tavori'],['נועה קירל','Noa Kirel'],['עדן בן זקן','Eden Ben Zaken'],['נסרין קדרי','Nasrin Kadri'],['אודיה','Odeya'],['אנה זק','Anna Zak'],['נטע ברזילי','Netta'],['עדן חסון','Eden Hason'],['ישי ריבו','Ishay Ribo'],['אושר כהן','Osher Cohen'],['רביד פלוטניק','Ravid Plotnik'],['נתן גושן','Nathan Goshen'],['מרגי','Margi']]}
+];
+const CATS={};INTL.forEach(c=>{c.type='song';c.country='US';c.group='לועזי';CATS[c.id]=c});ISR.forEach(c=>{c.type='artist';c.country='IL';c.group='ישראלי';CATS[c.id]=c});
+const AVATARS=['🎸','🎤','🥁','🎷','🎹','🎺','🎻','🪗','🪕','🎧'];
+const PCOLORS=['#FFC83D','#2EE6B5','#FF4F9A','#8B7BFF','#FF7A3D','#5EC8FF','#B6F36B','#FF9EDB','#C9A7FF','#7DF9FF'];
+const TURN_MS=45000, HELP_MS=20000, REVEAL_AUTO_MS=15000;
+const BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://test.mosquitto.org:8081/mqtt'];
+const NS='adsound-nhh/v1/';
+
+/* ========== כלים ========== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rid(n){const a='abcdefghijkmnpqrstuvwxyz23456789';let s='';for(let i=0;i<n;i++)s+=a[Math.floor(Math.random()*a.length)];return s}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+function toast(msg,ms){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),ms||2600)}
+
+/* ========== בדיקת תשובות ========== */
+const FINALS={'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ'};
+function norm(s){
+  s=String(s||'').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g,'');
+  s=s.replace(/[֑-ׇ]/g,'');
+  s=s.replace(/\(.*?\)|\[.*?\]/g,' ');
+  s=s.replace(/\s[-–]\s.*$/,' ');
+  s=s.replace(/\b(feat|ft)\b.*$/,'');
+  s=s.replace(/[ךםןףץ]/g,c=>FINALS[c]);
+  s=s.replace(/&/g,' and ').replace(/[׳']/g,'').replace(/[^a-z0-9א-ת ]+/g,' ');
+  s=s.replace(/\bthe\b/g,' ').replace(/\band\b/g,' ').replace(/(^| )ו(?=[א-ת])/g,'$1 ');
+  return s.replace(/\s+/g,' ').trim();
+}
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array(n+1).fill(0).map((_,i)=>i);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function allowed(len){return len<=3?0:len<=6?1:len<=11?2:Math.floor(len*0.2)}
+function close(a,b,isArtist){
+  if(!a||!b)return false;
+  const A=a.replace(/ /g,''),B=b.replace(/ /g,'');
+  if(A===B)return true;
+  if(lev(A,B)<=allowed(B.length))return true;
+  if(B.includes(A)&&A.length>=Math.max(isArtist?5:4,Math.ceil(B.length*(isArtist?0.3:0.6))))return true;
+  if(A.includes(B)&&B.length>=4)return true;
+  if(isArtist){const toks=b.split(' ').filter(t=>t.length>=4);if(toks.some(t=>lev(A,t)<=allowed(t.length)))return true}
+  return false;
+}
+function variants(s){const n=norm(s);const v=[n];const h=n.replace(/(^| )ה(?=[א-ת]{2})/g,'$1');if(h!==n)v.push(h);return v}
+function matchAny(ans,truths,isArtist){
+  if(!ans||!String(ans).trim())return false;
+  const av=variants(ans);
+  return truths.filter(Boolean).some(t=>{const tv=variants(t);return av.some(a=>tv.some(b=>close(a,b,isArtist)))});
+}
+function cleanTitle(t){return String(t||'').replace(/\s*[\(\[].*?[\)\]]\s*/g,' ').replace(/\s[-–]\s.*$/,'').replace(/\s+/g,' ').trim()||t}
+
+/* ========== iTunes (JSONP) ========== */
+let jpN=0;
+function itunes(path,params){
+  return new Promise((res,rej)=>{
+    const cb='__it'+(++jpN)+'_'+Date.now();const s=document.createElement('script');
+    const t=setTimeout(()=>{clean();rej(new Error('timeout'))},10000);
+    function clean(){clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}s.remove()}
+    window[cb]=d=>{clean();res(d||{})};
+    const p=new URLSearchParams(Object.assign({},params,{callback:cb}));
+    s.src='https://itunes.apple.com/'+path+'?'+p.toString();
+    s.onerror=()=>{clean();rej(new Error('net'))};
+    document.head.appendChild(s);
+  });
+}
+async function findSong(cat,e){
+  const [t,a,ha]=e;
+  const d=await itunes('search',{term:cleanTitle(t)+' '+a,country:cat.country,media:'music',entity:'song',limit:10});
+  const rs=(d.results||[]).filter(x=>x.previewUrl&&!/karaoke|tribute|cover|instrumental/i.test(x.trackName+' '+x.collectionName+' '+x.artistName));
+  const r=rs.find(x=>matchAny(x.artistName,[a],true)&&matchAny(x.trackName,[t],false))||rs.find(x=>matchAny(x.artistName,[a],true));
+  if(!r)return null;
+  return {url:r.previewUrl,title:t,artist:a,artistId:r.artistId,trackId:r.trackId,truthT:[t,cleanTitle(r.trackName)],truthA:[a,r.artistName,ha],opt:{t:cleanTitle(t),a:a}};
+}
+async function artistTracks(cat,pair){
+  const [he,en]=pair;
+  async function q(term){
+    const d=await itunes('search',{term,country:'IL',media:'music',entity:'song',attribute:'artistTerm',limit:30});
+    const rs=(d.results||[]).filter(x=>x.previewUrl);
+    if(!rs.length)return [];
+    let good=rs.filter(x=>matchAny(x.artistName,[he,en],true));
+    if(!good.length){const cnt={};rs.forEach(x=>cnt[x.artistId]=(cnt[x.artistId]||0)+1);const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];good=rs.filter(x=>String(x.artistId)===top)}
+    const seen=new Set();const out=[];
+    for(const x of good){const k=norm(cleanTitle(x.trackName));if(!k||seen.has(k))continue;seen.add(k);out.push(x);if(out.length>=10)break}
+    return out;
+  }
+  let rs=await q(he);if(rs.length<3&&en){try{const r2=await q(en);if(r2.length>rs.length)rs=r2}catch(e){}}
+  return rs.map(r=>({url:r.previewUrl,title:cleanTitle(r.trackName),artist:he,artistId:r.artistId,trackId:r.trackId,truthT:[cleanTitle(r.trackName),r.trackName],truthA:[he,en,r.artistName],opt:{t:cleanTitle(r.trackName),a:he}}));
+}
+async function prepareTracks(cat,n,onProg){
+  if(cat.type==='song'){
+    const list=shuffle(cat.list.slice());const out=[];
+    for(let i=0;i<list.length&&out.length<n;i+=3){
+      const rs=await Promise.all(list.slice(i,i+3).map(e=>findSong(cat,e).catch(()=>null)));
+      rs.forEach(r=>{if(r&&out.length<n)out.push(r)});onProg(out.length/n);
+    }
+    const pool=cat.list.map(e=>({t:cleanTitle(e[0]),a:e[1]}));
+    return {tracks:out,pool};
+  }else{
+    const arts=shuffle(cat.artists.slice());const want=Math.min(arts.length,Math.max(5,Math.ceil(n*0.75)));
+    const by=[];
+    for(let i=0;i<arts.length&&by.length<want;i+=3){
+      const rs=await Promise.all(arts.slice(i,i+3).map(p=>artistTracks(cat,p).catch(()=>[])));
+      rs.forEach(r=>{if(r.length>=2)by.push(shuffle(r.slice(0,8)))});onProg(Math.min(1,by.length/want));
+    }
+    const pool=[];by.forEach(l=>l.forEach(t=>pool.push(t.opt)));
+    const out=[];let k=0,guard=0;
+    while(out.length<n&&by.length&&guard<500){const l=by[k%by.length];if(l.length)out.push(l.shift());k++;guard++;if(by.every(x=>!x.length))break}
+    return {tracks:out,pool};
+  }
+}
+
+/* ========== סאונד ========== */
+const aud=$('#aud');let actx=null;
+function ac(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(actx&&actx.state==='suspended')actx.resume();return actx}
+function tone(freqs,dur,type,gap,vol){const c=ac();if(!c)return;freqs.forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type=type||'triangle';o.frequency.value=f;const t0=c.currentTime+i*(gap||0.1);g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol||0.25,t0+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);o.connect(g).connect(c.destination);o.start(t0);o.stop(t0+dur+0.05)})}
+const sfx={win(){tone([523,659,784,1047,1319],0.35,'triangle',0.09,0.22)},half(){tone([523,659,784],0.3,'triangle',0.1)},lose(){tone([196,165,139],0.45,'sawtooth',0.18,0.12)},click(){tone([880],0.06,'square',0,0.05)},ll(){tone([660,990],0.15,'sine',0.07,0.2)}};
+function unlockAudio(){ac();try{aud.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';aud.play().catch(()=>{})}catch(e){}try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+let curPlayUrl=null;
+function playUrl(url){curPlayUrl=url;aud.src=url;aud.currentTime=0;aud.volume=1;const p=aud.play();if(p&&p.catch)p.catch(()=>{$('#tapAudio').classList.add('on')})}
+function stopAudio(){try{aud.pause()}catch(e){}}
+aud.addEventListener('play',()=>{$('#gVinyl').classList.add('spin');$('#eq').classList.add('on');$('#tapAudio').classList.remove('on')});
+['pause','ended'].forEach(ev=>aud.addEventListener(ev,()=>{$('#gVinyl').classList.remove('spin');$('#eq').classList.remove('on')}));
+function say(text,singerEl){
+  const on=()=>singerEl&&singerEl.classList.add('talk'),off=()=>{singerEl&&singerEl.classList.remove('talk');aud.volume=1};
+  on();aud.volume=0.25;let done=false;const fin=()=>{if(!done){done=true;off()}};
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const v=speechSynthesis.getVoices().find(v=>/^he|^iw/i.test(v.lang));if(v)u.voice=v;u.rate=1.05;u.pitch=1.15;u.onend=fin;u.onerror=fin;speechSynthesis.speak(u)}catch(e){}
+  setTimeout(fin,3200);
+}
+
+/* ========== הזמר המצויר ========== */
+function singerSVG(mood){
+  return `<svg class="singer ${mood==='sad'?'sad shake':'bounce'}" viewBox="0 0 200 230" aria-hidden="true">
+  <g class="spark" style="transform-origin:28px 40px"><path d="M28 28l4 9 9 3-9 4-4 9-4-9-9-4 9-3z" fill="#FFC83D"/></g>
+  <g class="spark" style="transform-origin:174px 60px;animation-delay:.5s"><path d="M174 50l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#FF4F9A"/></g>
+  <g class="spark" style="transform-origin:160px 18px;animation-delay:.9s"><path d="M160 10l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#2EE6B5"/></g>
+  <path d="M48 230 Q50 168 100 160 Q150 168 152 230Z" fill="#FFC83D"/>
+  <path d="M48 230 Q50 168 100 160 Q150 168 152 230Z" fill="url(#sq)" opacity=".35"/>
+  <defs><pattern id="sq" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.6" fill="#fff"/></pattern></defs>
+  <path d="M100 162 L84 230 L100 205 L116 230Z" fill="#26215C"/>
+  <path d="M100 166 l-12 -6 v12z M100 166 l12 -6 v12z" fill="#FF4F9A"/>
+  <rect x="90" y="148" width="20" height="18" rx="6" fill="#F2B79A"/>
+  <ellipse cx="100" cy="102" rx="46" ry="50" fill="#F5C4B3"/>
+  <ellipse cx="55" cy="108" rx="8" ry="11" fill="#F2B79A"/><ellipse cx="145" cy="108" rx="8" ry="11" fill="#F2B79A"/>
+  <path d="M52 92 Q44 30 104 32 Q170 26 150 92 Q146 64 120 60 Q132 52 118 44 Q100 62 72 60 Q58 66 52 92Z" fill="#1d1640"/>
+  <path d="M70 46 Q100 6 150 34 Q128 30 112 44Z" fill="#2c2266"/>
+  <rect x="62" y="86" width="34" height="22" rx="9" fill="#111"/><rect x="104" y="86" width="34" height="22" rx="9" fill="#111"/>
+  <rect x="94" y="92" width="12" height="4" fill="#111"/>
+  <path d="M68 90 l10 0 -6 8z M110 90 l10 0 -6 8z" fill="#fff" opacity=".55"/>
+  <path d="M60 126 q6 4 12 0 M128 126 q6 4 12 0" stroke="#F09595" stroke-width="5" stroke-linecap="round" fill="none" opacity=".7"/>
+  <g class="mouth">
+    <g class="m-happy"><path d="M80 116 Q100 146 120 116Z" fill="#712B13"/><path d="M90 132 Q100 140 110 132 Q100 126 90 132Z" fill="#F0997B"/><rect x="84" y="116" width="32" height="5" rx="2" fill="#fff"/></g>
+    <g class="m-sad"><path d="M84 134 Q100 116 116 134" stroke="#712B13" stroke-width="6" fill="none" stroke-linecap="round"/></g>
+  </g>
+  <path class="tear" d="M140 104 q5 10 0 14 q-5 -4 0 -14z" fill="#5EC8FF"/>
+  <g transform="rotate(-28 150 190)"><rect x="144" y="164" width="12" height="44" rx="5" fill="#444"/><circle cx="150" cy="158" r="14" fill="#9a99a0"/><path d="M138 158 h24 M140 152 h20 M140 164 h20" stroke="#6b6a70" stroke-width="2"/></g>
+  <ellipse cx="146" cy="196" rx="12" ry="10" fill="#F5C4B3"/>
+  </svg>`;
+}
+
+/* ========== קונפטי ========== */
+const cv=$('#confetti'),cx=cv.getContext('2d');let parts=[],cfRun=false;
+function confetti(n){cv.width=innerWidth;cv.height=innerHeight;const cols=['#FFC83D','#FF4F9A','#2EE6B5','#8B7BFF','#FF7A3D','#fff'];for(let i=0;i<(n||160);i++)parts.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*0.5,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,r:Math.random()*6.28,vr:(Math.random()-.5)*.3,w:6+Math.random()*7,h:8+Math.random()*10,c:cols[i%cols.length]});if(!cfRun){cfRun=true;requestAnimationFrame(cfStep)}}
+function cfStep(){cx.clearRect(0,0,cv.width,cv.height);parts=parts.filter(p=>p.y<cv.height+30);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.r+=p.vr;cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cx.restore()});if(parts.length)requestAnimationFrame(cfStep);else{cfRun=false;cx.clearRect(0,0,cv.width,cv.height)}}
+
+/* ========== תווים מרחפים ברקע ========== */
+(function(){const st=$('#stage');const ns=['♪','♫','♬','♩'];for(let i=0;i<10;i++){const e=document.createElement('div');e.className='note';e.textContent=ns[i%4];e.style.left=(Math.random()*95)+'vw';e.style.animationDuration=(10+Math.random()*12)+'s';e.style.animationDelay=(-Math.random()*20)+'s';e.style.color=['#FFC83D','#FF4F9A','#2EE6B5','#8B7BFF'][i%4];st.appendChild(e)}
+for(let i=0;i<14;i++){const b=document.createElement('i');b.style.animationDelay=(i*0.07)+'s';b.style.animationDuration=(0.6+Math.random()*0.6)+'s';$('#eq').appendChild(b)}})();
+
+/* ========== מצב ========== */
+const me={id:LS.get('nhh_id',null)||rid(10),name:LS.get('nhh_name','')};LS.set('nhh_id',me.id);
+let S=null,isHost=false,client=null,base='',offset=0,H={tracks:[],pool:[]};
+let L={playK:null,extraK:null,turnK:null,revealK:null,endK:null,mcK:null,helpK:null};
+let hostTimer=null,beatTimer=null;
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id==='s-'+id))}
+function pById(id){return S&&S.players.find(p=>p.id===id)}
+function nowHost(){return Date.now()-offset}
+
+/* ========== רשת (MQTT) ========== */
+function connectBroker(url){return new Promise((res,rej)=>{let c;try{c=mqtt.connect(url,{clientId:'nhh_'+rid(12),clean:true,connectTimeout:7000,reconnectPeriod:0,keepalive:30})}catch(e){return rej(e)}const t=setTimeout(()=>{try{c.end(true)}catch(e){}rej(new Error('timeout'))},8000);c.once('connect',()=>{clearTimeout(t);c.options.reconnectPeriod=2500;res(c)});c.once('error',e=>{clearTimeout(t);try{c.end(true)}catch(x){}rej(e)})})}
+function pub(topic,obj,retain){if(!client)return;try{client.publish(base+topic,obj==null?'':JSON.stringify(obj),{qos:1,retain:!!retain})}catch(e){}}
+function onMsg(topic,payload){
+  const sub=topic.slice(base.length);let d=null;const txt=payload.toString();
+  if(txt){try{d=JSON.parse(txt)}catch(e){return}}
+  if(sub==='/state'){if(isHost)return;if(!d){if(S){toast('המארח סגר את החדר');leave()}return}
+    if(S&&d.v<=S.v&&d.gid===S.gid)return;S=d;offset=Date.now()-d.hostNow;render();}
+  else if(sub==='/act'){if(isHost&&d)handleAction(d.from,d)}
+  else if(sub==='/fx'){if(d)flyReaction(d)}
+}
+function makeCode(){const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return s}
+
+async function createRoom(){
+  unlockAudio();showScreen('connect');$('#connectMsg').textContent='פותחים חדר...';
+  const code=makeCode();base=NS+code;
+  for(const url of BROKERS){try{client=await connectBroker(url);break}catch(e){client=null}}
+  if(!client){showScreen('home');$('#homeErr').textContent='אין חיבור לשרת. בדקו אינטרנט ונסו שוב.';return}
+  isHost=true;client.on('message',onMsg);client.subscribe([base+'/act',base+'/fx']);
+  S={gid:rid(6),v:0,code,host:me.id,phase:'lobby',cat:'i80',rounds:3,players:[],order:[],turn:0,log:[]};
+  addPlayer(me.id,me.name);location.hash=code;
+  hostTimer=setInterval(hostTick,300);broadcast();
+}
+async function joinRoom(code){
+  code=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(code.length!==4){$('#homeErr').textContent='קוד חדר צריך להיות 4 תווים';return}
+  unlockAudio();showScreen('connect');$('#connectMsg').textContent='מחפשים את חדר '+code+'...';
+  base=NS+code;S=null;
+  for(const url of BROKERS){
+    let c;try{c=await connectBroker(url)}catch(e){continue}
+    client=c;c.on('message',onMsg);c.subscribe([base+'/state',base+'/fx']);
+    const ok=await new Promise(r=>{let n=0;const iv=setInterval(()=>{if(S){clearInterval(iv);r(true)}else if(++n>14){clearInterval(iv);r(false)}},250)});
+    if(ok)break;try{c.end(true)}catch(e){}client=null;
+  }
+  if(!client||!S){showScreen('home');$('#homeErr').textContent='לא מצאנו חדר עם הקוד הזה';location.hash='';return}
+  isHost=false;location.hash=code;
+  send({type:'hello',name:me.name});
+  beatTimer=setInterval(()=>send({type:'ping',name:me.name}),5000);
+}
+function send(a){a.from=me.id;if(isHost)handleAction(me.id,a);else pub('/act',a)}
+function leave(){
+  try{if(isHost&&client){pub('/state',null,true)}else if(client){send({type:'bye'})}}catch(e){}
+  setTimeout(()=>{try{client&&client.end(true)}catch(e){}client=null},300);
+  clearInterval(hostTimer);clearInterval(beatTimer);hostTimer=beatTimer=null;
+  stopAudio();try{speechSynthesis.cancel()}catch(e){}
+  S=null;isHost=false;L={};location.hash='';closeModals();showScreen(me.name?'home':'name');
+}
+
+/* ========== לוגיקת מארח ========== */
+function broadcast(){S.v++;S.hostNow=Date.now();offset=0;pub('/state',S,true);render()}
+function addPlayer(id,name){
+  let p=pById(id);
+  if(!p){const i=S.players.length;p={id,name:name||'שחקן',score:0,av:AVATARS[i%AVATARS.length],col:PCOLORS[i%PCOLORS.length],ll:{mc:1,more:1,friend:1},seen:Date.now(),on:true};S.players.push(p);return true}
+  const ch=p.name!==name||!p.on;p.name=name||p.name;p.seen=Date.now();p.on=true;return ch;
+}
+function hostTick(){
+  if(!S)return;const now=Date.now();let ch=false;
+  const meP=pById(me.id);if(meP)meP.seen=now;
+  S.players.forEach(p=>{const on=now-p.seen<16000;if(on!==p.on){p.on=on;ch=true}});
+  if(S.phase==='turn'){
+    if(S.help&&S.help.reply==null&&now>S.help.deadline){S.help.reply='';S.log.push('⏰ '+(pById(S.help.to)||{}).name+' לא הספיק/ה לעזור');ch=true}
+    if(now>S.deadline){evaluate({title:'',artist:''},true);return}
+    const cur=pById(S.cur);if(cur&&!cur.on&&now-cur.seen>20000){evaluate({title:'',artist:''},true);return}
+  }
+  if(S.phase==='reveal'&&now>S.revealUntil){nextTurn();return}
+  if(ch)broadcast();
+}
+function handleAction(from,a){
+  if(!S)return;
+  switch(a.type){
+    case 'hello':case 'ping':{const isNew=!pById(from);const ch=addPlayer(from,a.name);if(isNew&&S.phase!=='lobby'){pById(from).spect=true}if(ch||isNew)broadcast();break}
+    case 'bye':{const p=pById(from);if(p){p.on=false;p.seen=0;if(S.phase==='lobby')S.players=S.players.filter(x=>x.id!==from);broadcast()}break}
+    case 'answer':if(S.phase==='turn'&&from===S.cur)evaluate(a,false);break;
+    case 'll':if(S.phase==='turn'&&from===S.cur)useLifeline(a);break;
+    case 'helpReply':if(S.phase==='turn'&&S.help&&S.help.to===from&&S.help.reply==null){S.help.reply=String(a.text||'').slice(0,80);S.log.push('💬 '+pById(from).name+' שלח/ה עזרה');broadcast()}break;
+    case 'next':if(S.phase==='reveal'&&(from===S.host||from===S.cur))nextTurn();break;
+  }
+}
+async function startGame(){
+  const active=S.players.filter(p=>p.on);
+  S.players=active;S.players.forEach(p=>{p.score=0;p.ll={mc:1,more:1,friend:1};p.spect=false});
+  const order=[];for(let r=0;r<S.rounds;r++){shuffle(S.players.map(p=>p.id)).forEach(id=>order.push(id))}
+  S.order=order;S.turn=0;S.phase='loading';S.load=0;S.gid=rid(6);broadcast();
+  const cat=CATS[S.cat];let res;
+  try{res=await prepareTracks(cat,order.length,f=>{S.load=f;broadcast()})}catch(e){res={tracks:[],pool:[]}}
+  if(!res.tracks.length){S.phase='lobby';broadcast();toast('לא הצלחנו לטעון שירים. בדקו את החיבור ונסו שוב.',4000);return}
+  while(res.tracks.length<order.length)res.tracks.push(res.tracks[res.tracks.length%Math.max(1,res.tracks.length)]);
+  H.tracks=res.tracks;H.pool=res.pool;startTurn();
+}
+function startTurn(){
+  while(S.turn<S.order.length){const p=pById(S.order[S.turn]);if(p&&p.on)break;S.turn++}
+  if(S.turn>=S.order.length){endGame();return}
+  const T=H.tracks[S.turn];
+  S.phase='turn';S.cur=S.order[S.turn];S.deadline=Date.now()+TURN_MS;S.play={k:rid(6),url:T.url};S.extra=null;S.mc=null;S.mcUsed=false;S.help=null;S.result=null;S.log=[];
+  broadcast();
+}
+async function useLifeline(a){
+  const p=pById(S.cur),T=H.tracks[S.turn];if(!p||!p.ll[a.kind])return;
+  if(a.kind==='mc'){
+    p.ll.mc=0;S.mcUsed=true;
+    const others=shuffle(H.pool.filter(o=>norm(o.t)!==norm(T.opt.t)&&norm(o.a)!==norm(T.opt.a)));
+    const uniq=[];others.forEach(o=>{if(uniq.length<3&&!uniq.some(u=>norm(u.t)===norm(o.t)))uniq.push(o)});
+    S.mc=shuffle([T.opt,...uniq]);S.log.push('🎯 '+p.name+' השתמש/ה בגלגל 4 תשובות');broadcast();
+  }else if(a.kind==='more'){
+    p.ll.more=0;S.log.push('🎵 '+p.name+' ביקש/ה לשמוע עוד שיר של האמן');broadcast();
+    try{
+      const d=await itunes('lookup',{id:T.artistId,entity:'song',limit:40,country:CATS[S.cat].country});
+      const rs=(d.results||[]).filter(x=>x.wrapperType==='track'&&x.previewUrl&&x.trackId!==T.trackId&&!matchAny(x.trackName,T.truthT,false));
+      if(!rs.length)throw 0;
+      const pick=rs[Math.floor(Math.random()*Math.min(rs.length,12))];
+      S.extra={k:rid(6),url:pick.previewUrl};S.deadline+=15000;broadcast();
+    }catch(e){p.ll.more=1;S.log.push('😕 לא נמצא שיר נוסף – הגלגל הוחזר');broadcast()}
+  }else if(a.kind==='friend'){
+    const f=pById(a.to);if(!f||!f.on||f.id===p.id)return;
+    p.ll.friend=0;S.help={k:rid(6),to:f.id,deadline:Date.now()+HELP_MS,reply:null};S.deadline+=HELP_MS;S.log.push('🤝 '+p.name+' ביקש/ה עזרה מ'+f.name);broadcast();
+  }
+}
+function evaluate(ans,timeout){
+  if(S.phase!=='turn')return;
+  const T=H.tracks[S.turn],p=pById(S.cur);
+  const okT=matchAny(ans.title,T.truthT,false),okA=matchAny(ans.artist,T.truthA,true);
+  const left=Math.max(0,S.deadline-Date.now());
+  let pts=(okT?50:0)+(okA?50:0);if(pts)pts+=Math.round(40*Math.min(1,left/TURN_MS));if(S.mcUsed)pts=Math.round(pts/2);
+  let friend=null;
+  if(S.help&&S.help.reply&&(matchAny(S.help.reply,T.truthT,false)||matchAny(S.help.reply,T.truthA,true))){const f=pById(S.help.to);if(f){f.score+=20;friend=f.name}}
+  if(p)p.score+=pts;
+  S.result={okT,okA,pts,title:T.title,artist:T.artist,at:String(ans.title||''),aa:String(ans.artist||''),timeout:!!timeout,friend,k:rid(6)};
+  S.phase='reveal';S.revealUntil=Date.now()+REVEAL_AUTO_MS;S.mc=null;
+  broadcast();
+}
+function override(){
+  if(!isHost||S.phase!=='reveal')return;const r=S.result,p=pById(S.cur);
+  const add=(r.okT?0:50)+(r.okA?0:50);const pts=S.mcUsed?Math.round(add/2):add;
+  r.okT=r.okA=true;r.pts+=pts;if(p)p.score+=pts;r.k=rid(6);r.over=true;S.revealUntil=Date.now()+REVEAL_AUTO_MS;broadcast();
+}
+function nextTurn(){S.turn++;if(S.turn>=S.order.length)endGame();else startTurn()}
+function endGame(){S.phase='end';S.endK=rid(6);broadcast()}
+function backToLobby(){S.phase='lobby';S.players.forEach(p=>{p.score=0;p.spect=false});S.players=S.players.filter(p=>p.on);broadcast()}
+
+/* ========== תצוגה ========== */
+function chip(p,extra){return `<div class="pchip ${p.on?'':'off'} ${extra||''}" style="${extra==='cur'?'':'border-color:'+p.col}"><span class="av">${p.av}</span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}${S.phase!=='lobby'?`<span class="sc">${p.score}</span>`:''}${p.id===S.host?' 👑':''}</div>`}
+function render(){
+  if(!S){showScreen(me.name?'home':'name');return}
+  ({lobby:renderLobby,loading:renderLoading,turn:renderGame,reveal:renderGame,end:renderEnd}[S.phase]||renderLobby)();
+}
+function catBtn(c){return `<button class="cat ${S.cat===c.id?'sel':''} ${isHost?'':'dis'}" data-cat="${c.id}" style="background:${c.color};color:${['#FFC83D','#2EE6B5','#5EC8FF'].includes(c.color)?'#1d1640':'#fff'}">${c.label}<small>${c.group}</small></button>`}
+function renderLobby(){
+  showScreen('lobby');closeModals();stopAudio();
+  $('#roomCode').textContent=S.code;
+  const link=location.href.split('#')[0]+'#'+S.code;
+  $('#waLink').href='https://wa.me/?text='+encodeURIComponent('בוא/י לשחק איתי "נחש את הלהיט"! 🎵\nקוד חדר: '+S.code+'\n'+link);
+  $('#lobbyPlayers').innerHTML=S.players.map(p=>chip(p)).join('');
+  $('#pCount').textContent='('+S.players.filter(p=>p.on).length+')';
+  $('#catsIntl').innerHTML=INTL.map(catBtn).join('');$('#catsIl').innerHTML=ISR.map(catBtn).join('');
+  $('#roundsVal').textContent=S.rounds;
+  $('#rMinus').classList.toggle('hidden',!isHost);$('#rPlus').classList.toggle('hidden',!isHost);
+  $('#startBtn').classList.toggle('hidden',!isHost);$('#waitHost').classList.toggle('hidden',isHost);
+}
+function renderLoading(){showScreen('loading');$('#loadBar').style.width=Math.round((S.load||0)*100)+'%'}
+function renderGame(){
+  showScreen('game');
+  const cur=pById(S.cur)||{name:'?'};const mine=S.cur===me.id;const cat=CATS[S.cat];
+  $('#turnInfo').textContent='שיר '+(S.turn+1)+' מתוך '+S.order.length;$('#catInfo').textContent=cat.group+' · '+cat.label;
+  $('#scores').innerHTML=S.players.slice().sort((a,b)=>b.score-a.score).map(p=>chip(p,p.id===S.cur?'cur':'')).join('');
+  // שינוי תור
+  const tk=S.gid+':'+S.turn;
+  if(L.turnK!==tk){L.turnK=tk;$('#aTitle').value='';$('#aArtist').value='';$('#ansErr').textContent='';$('#mcBox').innerHTML='';L.mcK=null;
+    if(mine){sfx.ll();setTimeout(()=>{try{$('#aTitle').focus({preventScroll:true})}catch(e){}},400)}}
+  // שמע
+  if(S.play&&L.playK!==S.play.k){L.playK=S.play.k;playUrl(S.play.url)}
+  if(S.extra&&L.extraK!==S.extra.k){L.extraK=S.extra.k;playUrl(S.extra.url);toast('🎵 מתנגן עכשיו שיר אחר של אותו אמן')}
+  const turn=S.phase==='turn';
+  $('#turnPane').classList.toggle('hidden',!turn);$('#revealPane').classList.toggle('hidden',turn);
+  if(turn){
+    $('#turnLbl').innerHTML=mine?'<span class="nm">התור שלך!</span> מה השיר?':`<span class="nm">${cur.av} ${esc(cur.name)}</span> מנחש/ת...`;
+    $('#ansArea').classList.toggle('hidden',!mine);
+    const p=pById(me.id);
+    document.querySelectorAll('.ll').forEach(b=>{const k=b.dataset.ll;let used=!(p&&p.ll[k]);if(k==='friend'&&!S.players.some(x=>x.on&&x.id!==me.id))used=true;if(k==='friend'&&S.help)used=true;b.classList.toggle('used',used)});
+    if(mine&&S.mc){const mk=S.mc.map(o=>o.t).join('|');if(L.mcK!==mk){L.mcK=mk;$('#mcBox').innerHTML=S.mc.map((o,i)=>`<button data-i="${i}"><b>${'אבגד'[i]}</b>${esc(o.t)} – ${esc(o.a)}</button>`).join('')}}
+    // עזרה
+    let hb='';
+    if(S.help){const f=pById(S.help.to)||{name:'?'};
+      if(S.help.reply==null)hb=`<div class="bubble"><small>${f.av||''} ${esc(f.name)} חושב/ת...</small>⏳</div>`;
+      else hb=`<div class="bubble"><small>${f.av||''} ${esc(f.name)} אומר/ת:</small>${S.help.reply?esc(S.help.reply):'לא הספקתי, סליחה! 🙈'}</div>`;
+      if(S.help.to===me.id&&S.help.reply==null&&L.helpK!==S.help.k){L.helpK=S.help.k;openHelp(cur)}
+      if(S.help.reply!=null)$('#helpModal').classList.remove('on');
+    }
+    $('#helpBubble').innerHTML=hb;
+    $('#log').textContent=(S.log||[]).slice(-2).join('  ·  ');
+    $('#reactBar').innerHTML=mine?'':['👏','😂','😱','🔥','🙈','💃'].map(e=>`<button data-e="${e}">${e}</button>`).join('');
+  }else renderReveal(cur,mine);
+}
+function renderReveal(cur,mine){
+  closeModals();const r=S.result;if(!r)return;
+  const both=r.okT&&r.okA,half=(r.okT||r.okA)&&!both;
+  const fresh=L.revealK!==r.k;
+  if(fresh){
+    L.revealK=r.k;
+    $('#singerWrap').innerHTML=singerSVG(both||half?'happy':'sad');
+    const txt=both?`כל הכבוד, ${cur.name}!`:half?`כמעט, ${cur.name}! חצי כבוד`:`אוי לא, ${cur.name}...`;
+    $('#speech').textContent=txt;$('#speech').style.animation='none';void $('#speech').offsetWidth;$('#speech').style.animation='';
+    if(both){sfx.win();confetti(200)}else if(half){sfx.half();confetti(70)}else sfx.lose();
+    setTimeout(()=>say(txt,$('#singerWrap .singer')),350);
+  }
+  $('#rvSong').textContent=r.title;$('#rvArt').textContent=r.artist;
+  const mark=(ok,v)=>`<span class="${ok?'ok':'no'}">${ok?'✔':'✘'} ${v?esc(v):'—'}</span>`;
+  $('#rvRes').innerHTML=r.timeout&&!r.at&&!r.aa?'<span class="no">⏰ נגמר הזמן</span>':`${mark(r.okT,r.at)}${mark(r.okA,r.aa)}`;
+  $('#rvPts').textContent=r.pts?'+'+r.pts+' נקודות':'0 נקודות';
+  $('#rvExtra').textContent=[S.mcUsed?'(חצי ניקוד – גלגל 4 תשובות)':'',r.friend?`🤝 ${r.friend} קיבל/ה +20 על עזרה טובה`:'',r.over?'המארח אישר את התשובה':''].filter(Boolean).join(' · ');
+  const canNext=isHost||mine;$('#nextBtn').classList.toggle('hidden',!canNext);
+  $('#nextBtn').textContent=S.turn+1>=S.order.length?'לתוצאות!':'לשיר הבא';
+  $('#overrideBtn').classList.toggle('hidden',!(isHost&&!(r.okT&&r.okA)));
+  $('#nextHint').textContent=canNext?'':'השיר הבא יתחיל עוד רגע...';
+}
+function renderEnd(){
+  showScreen('end');closeModals();
+  const rank=S.players.slice().sort((a,b)=>b.score-a.score);const w=rank[0];
+  if(L.endK!==S.endK){L.endK=S.endK;stopAudio();
+    $('#endSinger').innerHTML=singerSVG('happy');const txt=w?`כל הכבוד, ${w.name}! אלוף הלהיטים!`:'כל הכבוד!';
+    $('#endSpeech').textContent=txt;sfx.win();confetti(260);setTimeout(()=>confetti(160),1200);setTimeout(()=>say(txt,$('#endSinger .singer')),400)}
+  const pod=[rank[1],rank[0],rank[2]],hts=[90,130,65],cols=['#C9C9D9','#FFC83D','#E09B5A'],place=[2,1,3];
+  $('#podium').innerHTML=pod.map((p,i)=>p?`<div class="pod"><div class="av">${p.av}</div><div class="nm">${esc(p.name)}</div><div class="blk" style="height:${hts[i]}px;background:${cols[i]};color:#26215C">${place[i]}<div style="font-family:Rubik;font-size:13px">${p.score}</div></div></div>`:'<div class="pod"></div>').join('');
+  $('#endList').innerHTML=rank.map((p,i)=>`<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span>${i+1}. ${p.av} ${esc(p.name)}</span><b>${p.score}</b></div>`).join('');
+  $('#againBtn').classList.toggle('hidden',!isHost);
+}
+function closeModals(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on'))}
+let helpIv=null;
+function openHelp(cur){
+  $('#helpTitle').textContent=cur.name+' צריך/ה את העזרה שלך!';$('#helpInp').value='';$('#helpErr').textContent='';$('#helpModal').classList.add('on');sfx.ll();
+  clearInterval(helpIv);helpIv=setInterval(()=>{if(!S||!S.help){clearInterval(helpIv);return}const s=Math.max(0,Math.ceil((S.help.deadline-nowHost())/1000));$('#helpSec').textContent=s;if(s<=0){clearInterval(helpIv);$('#helpModal').classList.remove('on')}},250);
+}
+function flyReaction(d){const e=document.createElement('div');e.className='fly';e.style.left=(10+Math.random()*75)+'vw';e.innerHTML=esc(d.e)+'<small>'+esc(d.n)+'</small>';document.body.appendChild(e);setTimeout(()=>e.remove(),2500)}
+
+/* טיימר */
+(function loop(){
+  if(S&&S.phase==='turn'&&S.deadline){const left=Math.max(0,S.deadline-nowHost());const total=TURN_MS+(S.extra?15000:0)+(S.help?HELP_MS:0);$('#tbar').style.width=Math.min(100,left/total*100)+'%';$('#tsec').textContent=Math.ceil(left/1000)+' שניות';$('#tbar').style.opacity=left<10000&&Math.floor(left/400)%2?0.4:1}
+  requestAnimationFrame(loop)})();
+
+/* ========== אירועים ========== */
+function saveName(){const n=$('#nameInp').value.trim();if(n.length<2){$('#nameErr').textContent='צריך לפחות 2 אותיות';return}me.name=n;LS.set('nhh_name',n);$('#homeName').textContent=n;sfx.click();const h=location.hash.replace('#','');if(/^[A-Z0-9]{4}$/i.test(h))joinRoom(h);else showScreen('home')}
+$('#nameBtn').onclick=saveName;$('#nameInp').addEventListener('keydown',e=>{if(e.key==='Enter')saveName()});$('#nameInp').addEventListener('input',()=>$('#nameErr').textContent='');
+$('#chgName').onclick=()=>{$('#nameInp').value=me.name;showScreen('name')};
+$('#createBtn').onclick=()=>{$('#homeErr').textContent='';createRoom()};
+$('#joinBtn').onclick=()=>{$('#homeErr').textContent='';joinRoom($('#codeInp').value)};
+$('#codeInp').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom($('#codeInp').value)});
+$('#codeInp').addEventListener('input',()=>$('#homeErr').textContent='');
+$('#copyLink').onclick=()=>{const link=location.href.split('#')[0]+'#'+S.code;(navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('הקישור הועתק!'),()=>toast(link,5000))};
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.cat');if(c&&isHost&&S&&S.phase==='lobby'){S.cat=c.dataset.cat;sfx.click();broadcast()}
+  const mcb=e.target.closest('#mcBox button');if(mcb&&S&&S.mc){const o=S.mc[+mcb.dataset.i];sfx.click();send({type:'answer',title:o.t,artist:o.a})}
+  const rb=e.target.closest('#reactBar button');if(rb){const d={e:rb.dataset.e,n:me.name};pub('/fx',d);if(!client)flyReaction(d)}
+  const fb=e.target.closest('#friendList .pchip');if(fb){$('#friendPick').classList.remove('on');sfx.ll();send({type:'ll',kind:'friend',to:fb.dataset.id})}
+});
+$('#rMinus').onclick=()=>{if(S.rounds>1){S.rounds--;broadcast()}};$('#rPlus').onclick=()=>{if(S.rounds<5){S.rounds++;broadcast()}};
+$('#startBtn').onclick=()=>{unlockAudio();if(isHost)startGame()};
+$('#leaveLobby').onclick=leave;$('#leaveGame').onclick=leave;$('#exitBtn').onclick=leave;
+$('#againBtn').onclick=()=>{if(isHost)backToLobby()};
+function submitAns(){const t=$('#aTitle').value.trim(),a=$('#aArtist').value.trim();if(!t&&!a){$('#ansErr').textContent='כתבו לפחות שם שיר או אמן';return}sfx.click();send({type:'answer',title:t,artist:a})}
+$('#sendAns').onclick=submitAns;$('#aArtist').addEventListener('keydown',e=>{if(e.key==='Enter')submitAns()});$('#aTitle').addEventListener('keydown',e=>{if(e.key==='Enter')$('#aArtist').focus()});
+['#aTitle','#aArtist'].forEach(s=>$(s).addEventListener('input',()=>$('#ansErr').textContent=''));
+document.querySelectorAll('.ll').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.ll;if(b.classList.contains('used'))return;
+  if(k==='friend'){const fs=S.players.filter(p=>p.on&&p.id!==me.id);$('#friendList').innerHTML=fs.map(p=>`<div class="pchip" data-id="${p.id}" style="border-color:${p.col};cursor:pointer"><span class="av">${p.av}</span>${esc(p.name)}</div>`).join('');$('#friendPick').classList.add('on');return}
+  sfx.ll();send({type:'ll',kind:k});
+});
+$('#friendCancel').onclick=()=>$('#friendPick').classList.remove('on');
+$('#helpSend').onclick=()=>{const t=$('#helpInp').value.trim();if(!t){$('#helpErr').textContent='כתבו משהו כדי לעזור';return}send({type:'helpReply',text:t});$('#helpModal').classList.remove('on');toast('העזרה נשלחה!')};
+$('#helpInp').addEventListener('input',()=>$('#helpErr').textContent='');
+$('#helpInp').addEventListener('keydown',e=>{if(e.key==='Enter')$('#helpSend').click()});
+$('#replayBtn').onclick=()=>{if(S&&S.play)playUrl(S.extra&&curPlayUrl===S.extra.url?S.play.url:S.play.url)};
+$('#tapAudio').onclick=()=>{aud.play().catch(()=>{})};
+$('#nextBtn').onclick=()=>{sfx.click();send({type:'next'})};
+$('#overrideBtn').onclick=override;
+window.addEventListener('beforeunload',()=>{if(isHost&&client)pub('/state',null,true)});
+try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
+
+/* התחלה */
+if(me.name){$('#homeName').textContent=me.name;const h=location.hash.replace('#','');if(/^[A-Z0-9]{4}$/i.test(h))joinRoom(h);else showScreen('home')}else showScreen('name');
+</script>
+</body>
+</html>
