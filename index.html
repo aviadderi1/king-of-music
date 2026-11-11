@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Secular+One&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 :root{--bg:#140a33;--bg2:#090418;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--gold:#FFC83D;--pink:#FF4F9A;--teal:#2EE6B5;--violet:#8B7BFF;--orange:#FF7A3D;--txt:#fff;--mut:#b9b0e8}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -150,10 +151,43 @@ input{font-family:inherit}
 .hidden{display:none!important}
 .helper{font-size:12px;color:var(--mut);text-align:center;margin-top:16px;line-height:1.5}
 a{color:var(--gold)}
+#bg3d{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+body.has3d .stage{display:none}
+body.has3d{background:#0b0520}
+.pav{width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;border:2px solid rgba(255,255,255,.7);flex-shrink:0}
+.pav.big{width:58px;height:58px;border-width:3px}
+.pav.mid{width:34px;height:34px}
+.pod .av .pav{width:56px;height:56px;border:3px solid #fff}
+.photo-pick{width:86px;height:86px;border-radius:50%;border:3px dashed var(--gold);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--gold);font-size:12px;flex-shrink:0;cursor:pointer;background:rgba(255,200,61,.08);overflow:hidden;position:relative}
+.photo-pick img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo-pick .cam{font-size:28px;line-height:1}
+.photo-pick.has{border-style:solid}
+.photo-pick.has .lbl{display:none}
+.share-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.share-row button,.share-row a{padding:10px 14px;border-radius:12px;font-size:14px;font-weight:500;text-decoration:none;color:#fff;display:inline-flex;align-items:center;gap:6px}
+.sh-copy{background:#5a4bd1}.sh-wa{background:#1fae5b}.sh-more{background:rgba(255,255,255,.14)}
+.go-wrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,2,20,.62);z-index:40;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.go-wrap.on{display:flex;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.go-card{text-align:center;animation:popIn .55s cubic-bezier(.3,1.6,.5,1)}
+.go-cat{font-family:'Secular One';font-size:30px;margin-bottom:6px;text-shadow:0 3px 0 rgba(0,0,0,.4)}
+.go-sub{color:var(--mut);margin-bottom:6px}
+.go{position:relative;width:200px;height:200px;margin:8px auto 10px;background:none;display:block}
+.go .r{position:absolute;inset:0;border-radius:50%;border:4px solid var(--gold);animation:ring 1.8s ease-out infinite}
+.go .r2{animation-delay:.6s}.go .r3{animation-delay:1.2s}
+@keyframes ring{0%{transform:scale(.75);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+.go .b{position:absolute;inset:14px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#FFF1B8 0%,#FFC83D 38%,#E8890B 70%,#8a4a00 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b2400;font-family:'Secular One';font-size:30px;animation:gpulse 1.1s ease-in-out infinite;overflow:hidden;box-shadow:inset 0 -10px 0 rgba(0,0,0,.25),0 12px 40px rgba(255,200,61,.55)}
+.go .b .tri{width:0;height:0;border-top:26px solid transparent;border-bottom:26px solid transparent;border-left:40px solid #3b2400;margin-left:10px;margin-bottom:4px}
+.go .b::after{content:"";position:absolute;top:-10%;width:38%;height:120%;background:rgba(255,255,255,.45);transform:skewX(-20deg);animation:shine 2.3s ease-in-out infinite}
+@keyframes gpulse{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.08) rotate(3deg)}}
+@keyframes shine{0%{left:-70%}60%,100%{left:140%}}
+.go:active .b{transform:scale(.92)}
+.wait-cat{font-family:'Secular One';font-size:20px;color:var(--gold)}
 </style>
 </head>
 <body>
 <div class="stage" id="stage"><div class="beam b1"></div><div class="beam b2"></div><div class="beam b3"></div></div>
+<canvas id="bg3d"></canvas>
 <canvas id="confetti"></canvas>
 <div id="app">
 
@@ -163,7 +197,11 @@ a{color:var(--gold)}
   <div class="vinyl spin"></div>
   <div class="card">
     <h3>איך קוראים לך?</h3>
-    <input class="inp" id="nameInp" maxlength="14" placeholder="השם שלך" autocomplete="off">
+    <div class="row" style="margin-top:10px">
+      <label class="photo-pick" id="photoPick"><input type="file" id="photoInp" accept="image/*" hidden><span class="lbl center"><span class="cam">📷</span><br>העלה תמונה</span></label>
+      <input class="inp" id="nameInp" maxlength="14" placeholder="השם שלך" autocomplete="off" style="margin-top:0">
+    </div>
+    <div class="mut" style="font-size:12px;margin-top:8px">התמונה תופיע לכל החברים בחדר</div>
     <div class="err" id="nameErr"></div>
     <button class="big-btn gold" id="nameBtn">יאללה, מתחילים</button>
   </div>
@@ -171,7 +209,7 @@ a{color:var(--gold)}
 
 <!-- בית -->
 <section class="screen" id="s-home">
-  <div class="logo"><h1>נחש את הלהיט</h1><div class="tag">שלום, <b id="homeName"></b>! <button class="small-btn" id="chgName" style="padding:3px 9px;font-size:12px">החלף שם</button></div></div>
+  <div class="logo"><h1>נחש את הלהיט</h1><div class="tag"><span id="homeAv"></span> שלום, <b id="homeName"></b>! <button class="small-btn" id="chgName" style="padding:3px 9px;font-size:12px">החלף שם / תמונה</button></div></div>
   <div class="vinyl spin"></div>
   <div class="card">
     <button class="big-btn gold" id="createBtn">צור חדר חדש</button>
@@ -195,9 +233,10 @@ a{color:var(--gold)}
   <div class="card center">
     <div class="mut">קוד החדר</div>
     <div class="code" id="roomCode">----</div>
-    <div class="row" style="justify-content:center;flex-wrap:wrap">
-      <button class="small-btn" id="copyLink">העתק קישור</button>
-      <a class="small-btn" id="waLink" target="_blank" rel="noopener" style="text-decoration:none;color:#fff">שלח בוואטסאפ</a>
+    <div class="share-row">
+      <button class="sh-copy" id="copyLink">📋 העתק קוד + קישור</button>
+      <a class="sh-wa" id="waLink" target="_blank" rel="noopener">💬 וואטסאפ</a>
+      <button class="sh-more hidden" id="shareBtn">📤 שתף</button>
     </div>
   </div>
   <div class="card">
@@ -210,11 +249,15 @@ a{color:var(--gold)}
     <div class="grid2" id="catsIntl"></div>
     <div class="cats-h">להיטים ישראליים</div>
     <div class="grid2" id="catsIl"></div>
-    <div class="cats-h center" style="margin-top:16px">שירים לכל שחקן</div>
-    <div class="stepper"><button id="rMinus">−</button><b id="roundsVal">3</b><button id="rPlus">+</button></div>
+    <div class="cats-h center" style="margin-top:14px">🎵 20 שירים בכל משחק</div>
   </div>
-  <button class="big-btn gold" id="startBtn">התחל משחק</button>
-  <div class="center mut" id="waitHost" style="margin-top:14px">מחכים שהמארח יתחיל...</div>
+  <div class="center mut" id="waitHost" style="margin-top:14px"></div>
+  <div class="go-wrap" id="goWrap"><div class="go-card">
+    <div class="go-cat" id="goCat"></div>
+    <div class="go-sub">20 שירים · מוכנים?</div>
+    <button class="go" id="goBtn" aria-label="התחל משחק"><span class="r"></span><span class="r r2"></span><span class="r r3"></span><span class="b"><span class="tri"></span>יאללה!</span></button>
+    <button class="small-btn" id="goChange">החלף קטגוריה</button>
+  </div></div>
 </section>
 
 <!-- טעינה -->
@@ -329,6 +372,7 @@ const ISR=[
 const CATS={};INTL.forEach(c=>{c.type='song';c.country='US';c.group='לועזי';CATS[c.id]=c});ISR.forEach(c=>{c.type='artist';c.country='IL';c.group='ישראלי';CATS[c.id]=c});
 const AVATARS=['🎸','🎤','🥁','🎷','🎹','🎺','🎻','🪗','🪕','🎧'];
 const PCOLORS=['#FFC83D','#2EE6B5','#FF4F9A','#8B7BFF','#FF7A3D','#5EC8FF','#B6F36B','#FF9EDB','#C9A7FF','#7DF9FF'];
+const TOTAL_SONGS=20;
 const TURN_MS=45000, HELP_MS=20000, REVEAL_AUTO_MS=15000;
 const BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://test.mosquitto.org:8081/mqtt'];
 const NS='adsound-nhh/v1/';
@@ -411,17 +455,18 @@ async function artistTracks(cat,pair){
   let rs=await q(he);if(rs.length<3&&en){try{const r2=await q(en);if(r2.length>rs.length)rs=r2}catch(e){}}
   return rs.map(r=>({url:r.previewUrl,title:cleanTitle(r.trackName),artist:he,artistId:r.artistId,trackId:r.trackId,truthT:[cleanTitle(r.trackName),r.trackName],truthA:[he,en,r.artistName],opt:{t:cleanTitle(r.trackName),a:he}}));
 }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function prepareTracks(cat,n,onProg){
   if(cat.type==='song'){
-    const list=shuffle(cat.list.slice());const out=[];
-    for(let i=0;i<list.length&&out.length<n;i+=3){
-      const rs=await Promise.all(list.slice(i,i+3).map(e=>findSong(cat,e).catch(()=>null)));
-      rs.forEach(r=>{if(r&&out.length<n)out.push(r)});onProg(out.length/n);
+    const list=shuffle(cat.list.slice());const out=[];const first=Math.min(n,6);let i=0;
+    while(i<list.length&&out.length<first){
+      const rs=await Promise.all(list.slice(i,i+3).map(e=>findSong(cat,e).catch(()=>null)));i+=3;
+      rs.forEach(r=>{if(r)out.push(r)});onProg(Math.min(1,out.length/first));
     }
     const pool=cat.list.map(e=>({t:cleanTitle(e[0]),a:e[1]}));
-    return {tracks:out,pool};
+    return {tracks:out,pool,rest:list.slice(i)};
   }else{
-    const arts=shuffle(cat.artists.slice());const want=Math.min(arts.length,Math.max(5,Math.ceil(n*0.75)));
+    const arts=shuffle(cat.artists.slice());const want=Math.min(arts.length,8);
     const by=[];
     for(let i=0;i<arts.length&&by.length<want;i+=3){
       const rs=await Promise.all(arts.slice(i,i+3).map(p=>artistTracks(cat,p).catch(()=>[])));
@@ -429,8 +474,15 @@ async function prepareTracks(cat,n,onProg){
     }
     const pool=[];by.forEach(l=>l.forEach(t=>pool.push(t.opt)));
     const out=[];let k=0,guard=0;
-    while(out.length<n&&by.length&&guard<500){const l=by[k%by.length];if(l.length)out.push(l.shift());k++;guard++;if(by.every(x=>!x.length))break}
-    return {tracks:out,pool};
+    while(out.length<n&&by.length&&guard<800){const l=by[k%by.length];if(l.length)out.push(l.shift());k++;guard++;if(by.every(x=>!x.length))break}
+    return {tracks:out,pool,rest:[]};
+  }
+}
+async function bgFill(cat,n,gid){
+  while(S&&S.gid===gid&&H.tracks.length<n&&H.rest.length){
+    await sleep(2200);if(!S||S.gid!==gid)return;
+    const e=H.rest.shift();if(!e)return;
+    try{const r=await findSong(cat,e);if(r&&S&&S.gid===gid)H.tracks.push(r)}catch(x){}
   }
 }
 
@@ -443,8 +495,8 @@ function unlockAudio(){ac();try{aud.src='data:audio/wav;base64,UklGRiQAAABXQVZFZ
 let curPlayUrl=null;
 function playUrl(url){curPlayUrl=url;aud.src=url;aud.currentTime=0;aud.volume=1;const p=aud.play();if(p&&p.catch)p.catch(()=>{$('#tapAudio').classList.add('on')})}
 function stopAudio(){try{aud.pause()}catch(e){}}
-aud.addEventListener('play',()=>{$('#gVinyl').classList.add('spin');$('#eq').classList.add('on');$('#tapAudio').classList.remove('on')});
-['pause','ended'].forEach(ev=>aud.addEventListener(ev,()=>{$('#gVinyl').classList.remove('spin');$('#eq').classList.remove('on')}));
+aud.addEventListener('play',()=>{window.bg3d&&bg3d.setPlaying(true);$('#gVinyl').classList.add('spin');$('#eq').classList.add('on');$('#tapAudio').classList.remove('on')});
+['pause','ended'].forEach(ev=>aud.addEventListener(ev,()=>{window.bg3d&&bg3d.setPlaying(false);$('#gVinyl').classList.remove('spin');$('#eq').classList.remove('on')}));
 function say(text,singerEl){
   const on=()=>singerEl&&singerEl.classList.add('talk'),off=()=>{singerEl&&singerEl.classList.remove('talk');aud.volume=1};
   on();aud.volume=0.25;let done=false;const fin=()=>{if(!done){done=true;off()}};
@@ -492,7 +544,8 @@ function cfStep(){cx.clearRect(0,0,cv.width,cv.height);parts=parts.filter(p=>p.y
 for(let i=0;i<14;i++){const b=document.createElement('i');b.style.animationDelay=(i*0.07)+'s';b.style.animationDuration=(0.6+Math.random()*0.6)+'s';$('#eq').appendChild(b)}})();
 
 /* ========== מצב ========== */
-const me={id:LS.get('nhh_id',null)||rid(10),name:LS.get('nhh_name','')};LS.set('nhh_id',me.id);
+const me={id:LS.get('nhh_id',null)||rid(10),name:LS.get('nhh_name',''),photo:LS.get('nhh_photo','')};LS.set('nhh_id',me.id);
+const PHOTOS={};
 let S=null,isHost=false,client=null,base='',offset=0,H={tracks:[],pool:[]};
 let L={playK:null,extraK:null,turnK:null,revealK:null,endK:null,mcK:null,helpK:null};
 let hostTimer=null,beatTimer=null;
@@ -506,6 +559,7 @@ function connectBroker(url){return new Promise((res,rej)=>{let c;try{c=mqtt.conn
 function pub(topic,obj,retain){if(!client)return;try{client.publish(base+topic,obj==null?'':JSON.stringify(obj),{qos:1,retain:!!retain})}catch(e){}}
 function onMsg(topic,payload){
   const sub=topic.slice(base.length);let d=null;const txt=payload.toString();
+  if(sub.startsWith('/photo/')){const id=sub.slice(7);if(/^data:image\/(jpeg|png|webp);base64,/.test(txt)&&txt.length<60000)PHOTOS[id]=txt;else delete PHOTOS[id];if(S)render();return}
   if(txt){try{d=JSON.parse(txt)}catch(e){return}}
   if(sub==='/state'){if(isHost)return;if(!d){if(S){toast('המארח סגר את החדר');leave()}return}
     if(S&&d.v<=S.v&&d.gid===S.gid)return;S=d;offset=Date.now()-d.hostNow;render();}
@@ -519,8 +573,8 @@ async function createRoom(){
   const code=makeCode();base=NS+code;
   for(const url of BROKERS){try{client=await connectBroker(url);break}catch(e){client=null}}
   if(!client){showScreen('home');$('#homeErr').textContent='אין חיבור לשרת. בדקו אינטרנט ונסו שוב.';return}
-  isHost=true;client.on('message',onMsg);client.subscribe([base+'/act',base+'/fx']);
-  S={gid:rid(6),v:0,code,host:me.id,phase:'lobby',cat:'i80',rounds:3,players:[],order:[],turn:0,log:[]};
+  isHost=true;client.on('message',onMsg);client.subscribe([base+'/act',base+'/fx',base+'/photo/+']);pubPhoto();
+  S={gid:rid(6),v:0,code,host:me.id,phase:'lobby',cat:null,players:[],order:[],turn:0,log:[]};
   addPlayer(me.id,me.name);location.hash=code;
   hostTimer=setInterval(hostTick,300);broadcast();
 }
@@ -530,13 +584,13 @@ async function joinRoom(code){
   base=NS+code;S=null;
   for(const url of BROKERS){
     let c;try{c=await connectBroker(url)}catch(e){continue}
-    client=c;c.on('message',onMsg);c.subscribe([base+'/state',base+'/fx']);
+    client=c;c.on('message',onMsg);c.subscribe([base+'/state',base+'/fx',base+'/photo/+']);
     const ok=await new Promise(r=>{let n=0;const iv=setInterval(()=>{if(S){clearInterval(iv);r(true)}else if(++n>14){clearInterval(iv);r(false)}},250)});
     if(ok)break;try{c.end(true)}catch(e){}client=null;
   }
   if(!client||!S){showScreen('home');$('#homeErr').textContent='לא מצאנו חדר עם הקוד הזה';location.hash='';return}
   isHost=false;location.hash=code;
-  send({type:'hello',name:me.name});
+  send({type:'hello',name:me.name});pubPhoto();
   beatTimer=setInterval(()=>send({type:'ping',name:me.name}),5000);
 }
 function send(a){a.from=me.id;if(isHost)handleAction(me.id,a);else pub('/act',a)}
@@ -581,18 +635,23 @@ function handleAction(from,a){
 async function startGame(){
   const active=S.players.filter(p=>p.on);
   S.players=active;S.players.forEach(p=>{p.score=0;p.ll={half:1,more:1,friend:1};p.spect=false});
-  const order=[];for(let r=0;r<S.rounds;r++){shuffle(S.players.map(p=>p.id)).forEach(id=>order.push(id))}
+  if(!S.cat){toast('בחרו קטגוריה');return}
+  const ids=S.players.map(p=>p.id);const order=[];
+  while(order.length<TOTAL_SONGS){shuffle(ids.slice()).forEach(id=>{if(order.length<TOTAL_SONGS&&!(ids.length>1&&order[order.length-1]===id))order.push(id)});if(ids.length===1&&order.length<TOTAL_SONGS)order.push(ids[0])}
   S.order=order;S.turn=0;S.phase='loading';S.load=0;S.gid=rid(6);broadcast();
   const cat=CATS[S.cat];let res;
   try{res=await prepareTracks(cat,order.length,f=>{S.load=f;broadcast()})}catch(e){res={tracks:[],pool:[]}}
   if(!res.tracks.length){S.phase='lobby';broadcast();toast('לא הצלחנו לטעון שירים. בדקו את החיבור ונסו שוב.',4000);return}
-  while(res.tracks.length<order.length)res.tracks.push(res.tracks[res.tracks.length%Math.max(1,res.tracks.length)]);
-  H.tracks=res.tracks;H.pool=res.pool;startTurn();
+  H.tracks=res.tracks;H.pool=res.pool;H.rest=res.rest||[];bgFill(cat,order.length,S.gid);startTurn();
 }
-function startTurn(){
+async function startTurn(){
   while(S.turn<S.order.length){const p=pById(S.order[S.turn]);if(p&&p.on)break;S.turn++}
   if(S.turn>=S.order.length){endGame();return}
-  const T=H.tracks[S.turn];
+  let T=H.tracks[S.turn];
+  if(!T){const cat=CATS[S.cat];
+    while(!H.tracks[S.turn]&&H.rest&&H.rest.length){const r=await findSong(cat,H.rest.shift()).catch(()=>null);if(r)H.tracks.push(r)}
+    T=H.tracks[S.turn]||H.tracks[Math.floor(Math.random()*H.tracks.length)];H.tracks[S.turn]=T;
+  }
   S.phase='turn';S.cur=S.order[S.turn];S.deadline=Date.now()+TURN_MS;S.play={k:rid(6),url:T.url};S.extra=null;S.mc=makeOptions(T);S.removed=[];S.halfUsed=false;S.help=null;S.result=null;S.log=[];
   broadcast();
 }
@@ -637,28 +696,33 @@ function evaluate(idx,timeout){
   S.phase='reveal';S.revealUntil=Date.now()+REVEAL_AUTO_MS;
   broadcast();
 }
-function nextTurn(){S.turn++;if(S.turn>=S.order.length)endGame();else startTurn()}
+function nextTurn(){if(S.phase==='switch')return;S.phase='switch';S.turn++;if(S.turn>=S.order.length)endGame();else startTurn()}
 function endGame(){S.phase='end';S.endK=rid(6);broadcast()}
-function backToLobby(){S.phase='lobby';S.players.forEach(p=>{p.score=0;p.spect=false});S.players=S.players.filter(p=>p.on);broadcast()}
+function backToLobby(){S.phase='lobby';S.cat=null;S.players.forEach(p=>{p.score=0;p.spect=false});S.players=S.players.filter(p=>p.on);broadcast()}
 
 /* ========== תצוגה ========== */
-function chip(p,extra){return `<div class="pchip ${p.on?'':'off'} ${extra||''}" style="${extra==='cur'?'':'border-color:'+p.col}"><span class="av">${p.av}</span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}${S.phase!=='lobby'?`<span class="sc">${p.score}</span>`:''}${p.id===S.host?' 👑':''}</div>`}
+function avH(p,cls){if(!p)return '';const ph=p.id===me.id?me.photo:PHOTOS[p.id];return ph?`<img class="pav ${cls||''}" src="${ph}" alt="">`:`<span class="av">${p.av||'🎵'}</span>`}
+function chip(p,extra){return `<div class="pchip ${p.on?'':'off'} ${extra||''}" style="${extra==='cur'?'':'border-color:'+p.col}">${avH(p)}${esc(p.name)}${p.id===me.id?' (את/ה)':''}${S.phase!=='lobby'?`<span class="sc">${p.score}</span>`:''}${p.id===S.host?' 👑':''}</div>`}
 function render(){
-  if(!S){showScreen(me.name?'home':'name');return}
+  if(!S){$('#goWrap').classList.remove('on');showScreen(me.name?'home':'name');return}
+  if(S.phase==='switch')return;
   ({lobby:renderLobby,loading:renderLoading,turn:renderGame,reveal:renderGame,end:renderEnd}[S.phase]||renderLobby)();
 }
 function catBtn(c){return `<button class="cat ${S.cat===c.id?'sel':''} ${isHost?'':'dis'}" data-cat="${c.id}" style="background:${c.color};color:${['#FFC83D','#2EE6B5','#5EC8FF'].includes(c.color)?'#1d1640':'#fff'}">${c.label}<small>${c.group}</small></button>`}
+function inviteText(){const link=location.href.split('#')[0]+'#'+S.code;return 'בוא/י לשחק איתי "נחש את הלהיט"! 🎵\nקוד חדר: '+S.code+'\n'+link}
 function renderLobby(){
   showScreen('lobby');closeModals();stopAudio();
   $('#roomCode').textContent=S.code;
   const link=location.href.split('#')[0]+'#'+S.code;
-  $('#waLink').href='https://wa.me/?text='+encodeURIComponent('בוא/י לשחק איתי "נחש את הלהיט"! 🎵\nקוד חדר: '+S.code+'\n'+link);
+  $('#waLink').href='https://wa.me/?text='+encodeURIComponent(inviteText());$('#shareBtn').classList.toggle('hidden',!navigator.share);
   $('#lobbyPlayers').innerHTML=S.players.map(p=>chip(p)).join('');
   $('#pCount').textContent='('+S.players.filter(p=>p.on).length+')';
   $('#catsIntl').innerHTML=INTL.map(catBtn).join('');$('#catsIl').innerHTML=ISR.map(catBtn).join('');
-  $('#roundsVal').textContent=S.rounds;
-  $('#rMinus').classList.toggle('hidden',!isHost);$('#rPlus').classList.toggle('hidden',!isHost);
-  $('#startBtn').classList.toggle('hidden',!isHost);$('#waitHost').classList.toggle('hidden',isHost);
+  const sc=S.cat&&CATS[S.cat];const hostP=pById(S.host)||{name:'המארח'};
+  $('#waitHost').innerHTML=isHost?(sc?'':'👆 בחר/י קטגוריה כדי להתחיל'):(sc?`<div class="wait-cat">${esc(sc.group)} · ${esc(sc.label)}</div>מחכים ש${esc(hostP.name)} יתחיל...`:`מחכים ש${esc(hostP.name)} יבחר קטגוריה...`);
+  const show=isHost&&!!sc;const gw=$('#goWrap');
+  if(show){$('#goCat').textContent=sc.group+' · '+sc.label;$('#goCat').style.color=sc.color}
+  if(show!==gw.classList.contains('on')){gw.classList.toggle('on',show);if(show)sfx.ll()}
 }
 function renderLoading(){showScreen('loading');$('#loadBar').style.width=Math.round((S.load||0)*100)+'%'}
 function renderGame(){
@@ -675,7 +739,7 @@ function renderGame(){
   const turn=S.phase==='turn';
   $('#turnPane').classList.toggle('hidden',!turn);$('#revealPane').classList.toggle('hidden',turn);
   if(turn){
-    $('#turnLbl').innerHTML=mine?'<span class="nm">התור שלך!</span> מה השיר?':`<span class="nm">${cur.av} ${esc(cur.name)}</span> מנחש/ת...`;
+    $('#turnLbl').innerHTML=mine?'<span class="nm">התור שלך!</span> מה השיר?':`<span class="nm">${avH(cur,'mid')} ${esc(cur.name)}</span> מנחש/ת...`;
     $('#ansArea').classList.toggle('hidden',!mine);
     const p=pById(me.id);
     document.querySelectorAll('.ll').forEach(b=>{const k=b.dataset.ll;let used=!(p&&p.ll[k]);if(k==='friend'&&!S.players.some(x=>x.on&&x.id!==me.id))used=true;if(k==='friend'&&S.help)used=true;b.classList.toggle('used',used)});
@@ -683,8 +747,8 @@ function renderGame(){
     // עזרה
     let hb='';
     if(S.help){const f=pById(S.help.to)||{name:'?'};
-      if(S.help.reply==null)hb=`<div class="bubble"><small>${f.av||''} ${esc(f.name)} חושב/ת...</small>⏳</div>`;
-      else{const o=S.help.reply>=0&&S.mc&&S.mc[S.help.reply];hb=`<div class="bubble"><small>${f.av||''} ${esc(f.name)} חושב/ת שזה:</small>${o?'<b>'+'אבגד'[S.help.reply]+'</b> '+esc(o.t)+' – '+esc(o.a):'לא הספקתי, סליחה! 🙈'}</div>`}
+      if(S.help.reply==null)hb=`<div class="bubble"><small>${avH(f)} ${esc(f.name)} חושב/ת...</small>⏳</div>`;
+      else{const o=S.help.reply>=0&&S.mc&&S.mc[S.help.reply];hb=`<div class="bubble"><small>${avH(f)} ${esc(f.name)} חושב/ת שזה:</small>${o?'<b>'+'אבגד'[S.help.reply]+'</b> '+esc(o.t)+' – '+esc(o.a):'לא הספקתי, סליחה! 🙈'}</div>`}
       if(S.help.to===me.id&&S.help.reply==null&&L.helpK!==S.help.k){L.helpK=S.help.k;openHelp(cur)}
       if(S.help.reply!=null)$('#helpModal').classList.remove('on');
     }
@@ -701,7 +765,7 @@ function renderReveal(cur,mine){
     $('#singerWrap').innerHTML=singerSVG(r.ok?'happy':'sad');
     const txt=r.ok?`כל הכבוד, ${cur.name}!`:r.idx<0?`נגמר הזמן, ${cur.name}!`:`אוי לא, ${cur.name}...`;
     $('#speech').textContent=txt;$('#speech').style.animation='none';void $('#speech').offsetWidth;$('#speech').style.animation='';
-    if(r.ok){sfx.win();confetti(200)}else sfx.lose();
+    if(r.ok){sfx.win();confetti(200);window.bg3d&&bg3d.celebrate()}else sfx.lose();
     setTimeout(()=>say(txt,$('#singerWrap .singer')),350);
   }
   $('#rvSong').textContent=r.title;$('#rvArt').textContent=r.artist;
@@ -717,13 +781,13 @@ function renderEnd(){
   const rank=S.players.slice().sort((a,b)=>b.score-a.score);const w=rank[0];
   if(L.endK!==S.endK){L.endK=S.endK;stopAudio();
     $('#endSinger').innerHTML=singerSVG('happy');const txt=w?`כל הכבוד, ${w.name}! אלוף הלהיטים!`:'כל הכבוד!';
-    $('#endSpeech').textContent=txt;sfx.win();confetti(260);setTimeout(()=>confetti(160),1200);setTimeout(()=>say(txt,$('#endSinger .singer')),400)}
+    $('#endSpeech').textContent=txt;sfx.win();confetti(260);window.bg3d&&bg3d.celebrate();setTimeout(()=>confetti(160),1200);setTimeout(()=>say(txt,$('#endSinger .singer')),400)}
   const pod=[rank[1],rank[0],rank[2]],hts=[90,130,65],cols=['#C9C9D9','#FFC83D','#E09B5A'],place=[2,1,3];
-  $('#podium').innerHTML=pod.map((p,i)=>p?`<div class="pod"><div class="av">${p.av}</div><div class="nm">${esc(p.name)}</div><div class="blk" style="height:${hts[i]}px;background:${cols[i]};color:#26215C">${place[i]}<div style="font-family:Rubik;font-size:13px">${p.score}</div></div></div>`:'<div class="pod"></div>').join('');
-  $('#endList').innerHTML=rank.map((p,i)=>`<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span>${i+1}. ${p.av} ${esc(p.name)}</span><b>${p.score}</b></div>`).join('');
+  $('#podium').innerHTML=pod.map((p,i)=>p?`<div class="pod"><div class="av">${avH(p,'big')}</div><div class="nm">${esc(p.name)}</div><div class="blk" style="height:${hts[i]}px;background:${cols[i]};color:#26215C">${place[i]}<div style="font-family:Rubik;font-size:13px">${p.score}</div></div></div>`:'<div class="pod"></div>').join('');
+  $('#endList').innerHTML=rank.map((p,i)=>`<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span>${i+1}. ${avH(p)} ${esc(p.name)}</span><b>${p.score}</b></div>`).join('');
   $('#againBtn').classList.toggle('hidden',!isHost);
 }
-function closeModals(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on'))}
+function closeModals(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on'));if(!S||S.phase!=='lobby')$('#goWrap').classList.remove('on')}
 let helpIv=null;
 function openHelp(cur){
   $('#helpTitle').textContent=cur.name+' צריך/ה את העזרה שלך!';$('#helpOpts').innerHTML=optsHTML(S.mc||[],S.removed);$('#helpModal').classList.add('on');sfx.ll();
@@ -739,12 +803,21 @@ function flyReaction(d){const e=document.createElement('div');e.className='fly';
 /* ========== אירועים ========== */
 function saveName(){const n=$('#nameInp').value.trim();if(n.length<2){$('#nameErr').textContent='צריך לפחות 2 אותיות';return}me.name=n;LS.set('nhh_name',n);$('#homeName').textContent=n;sfx.click();const h=location.hash.replace('#','');if(/^[A-Z0-9]{4}$/i.test(h))joinRoom(h);else showScreen('home')}
 $('#nameBtn').onclick=saveName;$('#nameInp').addEventListener('keydown',e=>{if(e.key==='Enter')saveName()});$('#nameInp').addEventListener('input',()=>$('#nameErr').textContent='');
-$('#chgName').onclick=()=>{$('#nameInp').value=me.name;showScreen('name')};
+$('#chgName').onclick=()=>{$('#nameInp').value=me.name;showMyPhoto();showScreen('name')};
 $('#createBtn').onclick=()=>{$('#homeErr').textContent='';createRoom()};
 $('#joinBtn').onclick=()=>{$('#homeErr').textContent='';joinRoom($('#codeInp').value)};
 $('#codeInp').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom($('#codeInp').value)});
 $('#codeInp').addEventListener('input',()=>$('#homeErr').textContent='');
-$('#copyLink').onclick=()=>{const link=location.href.split('#')[0]+'#'+S.code;(navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('הקישור הועתק!'),()=>toast(link,5000))};
+function copyText(t){if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t);return new Promise((res,rej)=>{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy')?res():rej()}catch(e){rej(e)}ta.remove()})}
+$('#copyLink').onclick=()=>{copyText(inviteText()).then(()=>toast('הקוד והקישור הועתקו! 📋'),()=>toast(inviteText(),6000))};
+$('#shareBtn').onclick=()=>{try{navigator.share({title:'נחש את הלהיט',text:inviteText()}).catch(()=>{})}catch(e){}};
+$('#goBtn').onclick=()=>{unlockAudio();sfx.win();$('#goWrap').classList.remove('on');if(isHost)startGame()};
+$('#goChange').onclick=()=>{if(isHost){S.cat=null;broadcast()}};
+function showMyPhoto(){const pp=$('#photoPick');pp.querySelectorAll('img').forEach(i=>i.remove());if(me.photo){const im=new Image();im.src=me.photo;pp.appendChild(im);pp.classList.add('has')}else pp.classList.remove('has');$('#homeAv').innerHTML=me.photo?`<img class="pav mid" src="${me.photo}" alt="">`:''}
+function pubPhoto(){if(client&&base)try{client.publish(base+'/photo/'+me.id,me.photo||'',{qos:1,retain:true})}catch(e){}}
+$('#photoInp').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();
+  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const m=Math.min(img.naturalWidth,img.naturalHeight);g.drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2,m,m,0,0,128,128);me.photo=c.toDataURL('image/jpeg',0.75);LS.set('nhh_photo',me.photo);URL.revokeObjectURL(url);showMyPhoto();pubPhoto();sfx.ll();toast('התמונה נשמרה!')};
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('לא הצלחנו לקרוא את התמונה. נסו תמונה אחרת.')};img.src=url;e.target.value=''});
 document.addEventListener('click',e=>{
   const c=e.target.closest('.cat');if(c&&isHost&&S&&S.phase==='lobby'){S.cat=c.dataset.cat;sfx.click();broadcast()}
   const mcb=e.target.closest('#mcBox button');if(mcb&&S&&S.mc&&S.phase==='turn'&&S.cur===me.id){mcb.classList.add('picked');sfx.click();send({type:'answer',idx:+mcb.dataset.i})}
@@ -752,13 +825,11 @@ document.addEventListener('click',e=>{
   const rb=e.target.closest('#reactBar button');if(rb){const d={e:rb.dataset.e,n:me.name};pub('/fx',d);if(!client)flyReaction(d)}
   const fb=e.target.closest('#friendList .pchip');if(fb){$('#friendPick').classList.remove('on');sfx.ll();send({type:'ll',kind:'friend',to:fb.dataset.id})}
 });
-$('#rMinus').onclick=()=>{if(S.rounds>1){S.rounds--;broadcast()}};$('#rPlus').onclick=()=>{if(S.rounds<5){S.rounds++;broadcast()}};
-$('#startBtn').onclick=()=>{unlockAudio();if(isHost)startGame()};
 $('#leaveLobby').onclick=leave;$('#leaveGame').onclick=leave;$('#exitBtn').onclick=leave;
 $('#againBtn').onclick=()=>{if(isHost)backToLobby()};
 document.querySelectorAll('.ll').forEach(b=>b.onclick=()=>{
   const k=b.dataset.ll;if(b.classList.contains('used'))return;
-  if(k==='friend'){const fs=S.players.filter(p=>p.on&&p.id!==me.id);$('#friendList').innerHTML=fs.map(p=>`<div class="pchip" data-id="${p.id}" style="border-color:${p.col};cursor:pointer"><span class="av">${p.av}</span>${esc(p.name)}</div>`).join('');$('#friendPick').classList.add('on');return}
+  if(k==='friend'){const fs=S.players.filter(p=>p.on&&p.id!==me.id);$('#friendList').innerHTML=fs.map(p=>`<div class="pchip" data-id="${p.id}" style="border-color:${p.col};cursor:pointer">${avH(p,'mid')}${esc(p.name)}</div>`).join('');$('#friendPick').classList.add('on');return}
   sfx.ll();send({type:'ll',kind:k});
 });
 $('#friendCancel').onclick=()=>$('#friendPick').classList.remove('on');
@@ -769,7 +840,112 @@ window.addEventListener('beforeunload',()=>{if(isHost&&client)pub('/state',null,
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
 
 /* התחלה */
+showMyPhoto();
 if(me.name){$('#homeName').textContent=me.name;const h=location.hash.replace('#','');if(/^[A-Z0-9]{4}$/i.test(h))joinRoom(h);else showScreen('home')}else showScreen('name');
+</script>
+<script>
+/* ========== במה תלת ממדית ========== */
+window.bg3d={setPlaying(){},celebrate(){}};
+(function(){
+  if(!window.THREE)return;
+  const cv=document.getElementById('bg3d');let R;
+  try{R=new THREE.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'})}catch(e){return}
+  document.body.classList.add('has3d');
+  const DPR=Math.min(window.devicePixelRatio||1,1.75);R.setPixelRatio(DPR);
+  R.setClearColor(0x0b0520,1);
+  const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x0b0520,0.055);
+  const cam=new THREE.PerspectiveCamera(55,1,0.1,120);
+  function resize(){const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.fov=w<h?68:55;cam.updateProjectionMatrix()}
+  resize();addEventListener('resize',resize);
+
+  scene.add(new THREE.AmbientLight(0x3a2c7a,0.9));
+  const hemi=new THREE.HemisphereLight(0x8b7bff,0x1a0b3d,0.5);scene.add(hemi);
+
+  // רצפת במה מבריקה
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(16,64),new THREE.MeshStandardMaterial({color:0x1a0f45,metalness:0.6,roughness:0.35}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-2.2;scene.add(floor);
+  const tiles=new THREE.Group();const tileCols=[0xff4f9a,0x2ee6b5,0xffc83d,0x8b7bff];
+  for(let x=-5;x<=5;x++)for(let z=-6;z<=1;z++){const m=new THREE.Mesh(new THREE.PlaneGeometry(0.92,0.92),new THREE.MeshBasicMaterial({color:tileCols[(x+z+20)%4],transparent:true,opacity:0.08,blending:THREE.AdditiveBlending,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x,-2.18,z);m.userData.ph=Math.random()*6;tiles.add(m)}
+  scene.add(tiles);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(6,0.05,8,120),new THREE.MeshBasicMaterial({color:0xff4f9a}));ring.rotation.x=Math.PI/2;ring.position.y=-2.15;ring.position.z=-2.5;scene.add(ring);
+
+  // כדור דיסקו
+  const discoMat=new THREE.MeshPhongMaterial({color:0xcfd3ff,specular:0xffffff,shininess:140,flatShading:true,emissive:0x15103a});
+  const disco=new THREE.Mesh(new THREE.IcosahedronGeometry(1.15,3),discoMat);disco.position.set(0,5.2,-3);scene.add(disco);
+  const rope=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,6),new THREE.MeshBasicMaterial({color:0x777799}));rope.position.set(0,9.2,-3);scene.add(rope);
+  const sparks=new THREE.Group();
+  for(let i=0;i<70;i++){const sp=new THREE.Mesh(new THREE.PlaneGeometry(0.09,0.09),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending,depthWrite:false}));
+    const th=Math.random()*Math.PI*2,ph=Math.random()*Math.PI*0.8+0.2,r=7+Math.random()*8;sp.position.set(Math.cos(th)*Math.sin(ph)*r,Math.cos(ph)*r*0.6+1,Math.sin(th)*Math.sin(ph)*r-3);sp.userData.ph=Math.random()*6;sparks.add(sp)}
+  scene.add(sparks);
+
+  // זרקורים
+  const cols=[0xff4f9a,0x2ee6b5,0xffc83d,0x8b7bff,0x5ec8ff];const beams=[],lights=[];
+  cols.forEach((col,i)=>{
+    const piv=new THREE.Group();piv.position.set(-6+i*3,8,-4);
+    const cone=new THREE.Mesh(new THREE.ConeGeometry(1.5,12,32,1,true),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.085,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
+    cone.position.y=-6;piv.add(cone);
+    const head=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.45,0.6,16),new THREE.MeshStandardMaterial({color:0x222233,metalness:0.8,roughness:0.3}));piv.add(head);
+    const lens=new THREE.Mesh(new THREE.CircleGeometry(0.33,24),new THREE.MeshBasicMaterial({color:col}));lens.rotation.x=Math.PI/2;lens.position.y=-0.31;piv.add(lens);
+    scene.add(piv);beams.push({piv,cone,ph:i*1.3});
+    const L=new THREE.PointLight(col,1.4,22,1.6);L.position.set(-6+i*3,3,-1);scene.add(L);lights.push(L);
+  });
+
+  // תקליט ענק
+  const rec=new THREE.Group();
+  rec.add(new THREE.Mesh(new THREE.CylinderGeometry(3,3,0.08,96),new THREE.MeshStandardMaterial({color:0x0c0c10,metalness:0.55,roughness:0.28})));
+  for(let i=0;i<10;i++){const g=new THREE.Mesh(new THREE.TorusGeometry(1.15+i*0.17,0.008,6,140),new THREE.MeshBasicMaterial({color:0x2a2a38}));g.rotation.x=Math.PI/2;g.position.y=0.045;rec.add(g)}
+  const lab=new THREE.Mesh(new THREE.CylinderGeometry(0.95,0.95,0.09,64),new THREE.MeshStandardMaterial({color:0xff4f9a,roughness:0.45,emissive:0x3a0a20}));rec.add(lab);
+  const lab2=new THREE.Mesh(new THREE.TorusGeometry(0.6,0.06,8,64),new THREE.MeshBasicMaterial({color:0xffc83d}));lab2.rotation.x=Math.PI/2;lab2.position.y=0.05;rec.add(lab2);
+  const hole=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.1,16),new THREE.MeshBasicMaterial({color:0x000000}));rec.add(hole);
+  rec.position.set(0,-1.2,-5.5);rec.rotation.x=0.42;scene.add(rec);
+  const shine=new THREE.Mesh(new THREE.PlaneGeometry(0.35,2.8),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.07,blending:THREE.AdditiveBlending,depthWrite:false}));
+  shine.rotation.x=-Math.PI/2;shine.position.set(1.4,0.06,0);rec.add(shine);
+
+  // רמקולים
+  function speaker(x){const g=new THREE.Group();const box=new THREE.Mesh(new THREE.BoxGeometry(1.6,3,1.2),new THREE.MeshStandardMaterial({color:0x15121f,roughness:0.6,metalness:0.3}));g.add(box);
+    const cones=[];[[0.7,0.55],[-0.65,0.55],[1.15,0.22]].forEach(([y,r])=>{const c=new THREE.Mesh(new THREE.CircleGeometry(r,32),new THREE.MeshStandardMaterial({color:0x2a2440,metalness:0.7,roughness:0.4}));c.position.set(0,y,0.61);g.add(c);const rim=new THREE.Mesh(new THREE.TorusGeometry(r,0.04,8,40),new THREE.MeshBasicMaterial({color:0x8b7bff}));rim.position.set(0,y,0.62);g.add(rim);cones.push(c)});
+    g.position.set(x,-0.7,-4);g.rotation.y=x>0?-0.35:0.35;g.userData.cones=cones;scene.add(g);return g}
+  const spk=[speaker(-6.2),speaker(6.2)];
+
+  // תווים מרחפים
+  const noteMat=new THREE.MeshStandardMaterial({color:0xffc83d,metalness:0.7,roughness:0.25,emissive:0x5a3200});
+  const noteMat2=new THREE.MeshStandardMaterial({color:0xff4f9a,metalness:0.7,roughness:0.25,emissive:0x4a0a25});
+  const notes=[];
+  for(let i=0;i<16;i++){const n=new THREE.Group();const m=i%2?noteMat:noteMat2;
+    const h=new THREE.Mesh(new THREE.SphereGeometry(0.2,18,14),m);h.scale.set(1.35,1,0.8);h.rotation.z=0.4;
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.85,8),m);st.position.set(0.22,0.42,0);n.add(h,st);
+    if(i%3===0){const fl=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.08,0.05),m);fl.position.set(0.36,0.8,0);fl.rotation.z=-0.5;n.add(fl)}
+    n.position.set((Math.random()-0.5)*14,Math.random()*9-3,-1-Math.random()*8);n.userData={v:0.006+Math.random()*0.01,w:Math.random()*6,s:0.7+Math.random()*0.7};n.scale.setScalar(n.userData.s);
+    scene.add(n);notes.push(n)}
+
+  // חלקיקי אבק אור
+  const pg=new THREE.BufferGeometry();const N=260,pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){pos[i*3]=(Math.random()-0.5)*22;pos[i*3+1]=Math.random()*12-2;pos[i*3+2]=-Math.random()*14+2}
+  pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const dust=new THREE.Points(pg,new THREE.PointsMaterial({color:0xcfc6ff,size:0.06,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(dust);
+
+  let playing=false,energy=0,boom=0,t=0,last=performance.now(),running=true;
+  window.bg3d={setPlaying(b){playing=!!b},celebrate(){boom=1}};
+  document.addEventListener('visibilitychange',()=>{running=!document.hidden;if(running){last=performance.now();requestAnimationFrame(loop)}});
+  function loop(now){
+    if(!running)return;
+    const dt=Math.min(0.05,(now-last)/1000);last=now;t+=dt;
+    energy+=((playing?1:0)-energy)*Math.min(1,dt*2.5);boom=Math.max(0,boom-dt*0.6);
+    const beat=playing?Math.pow(Math.max(0,Math.sin(t*Math.PI*2*1.05)),6):0;
+    disco.rotation.y+=dt*(0.35+energy*0.9);
+    rec.rotation.y-=dt*(0.4+energy*3.2);
+    beams.forEach((b,i)=>{b.piv.rotation.z=Math.sin(t*(0.5+energy*0.7)+b.ph)*(0.45+energy*0.25);b.piv.rotation.x=Math.cos(t*0.4+b.ph)*0.25;b.cone.material.opacity=0.07+energy*0.05+beat*0.06+boom*0.12});
+    lights.forEach((L,i)=>{L.intensity=1.1+energy*0.8+beat*1.4+boom*3;L.position.x=-6+i*3+Math.sin(t*0.7+i)*1.5});
+    tiles.children.forEach(m=>{m.material.opacity=0.04+(Math.sin(t*(1.5+energy*4)+m.userData.ph)*0.5+0.5)*(0.05+energy*0.12)+boom*0.15});
+    sparks.children.forEach(sp=>{sp.material.opacity=(Math.sin(t*3+sp.userData.ph)*0.5+0.5)*(0.35+energy*0.5);sp.lookAt(cam.position)});
+    spk.forEach(g=>g.userData.cones.forEach((c,j)=>{const k=1+beat*(j===0?0.12:0.06);c.scale.set(k,k,1)}));
+    notes.forEach(n=>{n.position.y+=n.userData.v*(1+energy*1.5+boom*4)*60*dt;n.rotation.y+=dt*1.2;n.position.x+=Math.sin(t+n.userData.w)*0.003;if(n.position.y>8){n.position.y=-3.5;n.position.x=(Math.random()-0.5)*14}});
+    dust.rotation.y+=dt*0.02;ring.material.color.setHSL((t*0.05)%1,0.85,0.6);
+    const a=t*0.08;cam.position.set(Math.sin(a)*2.2,1.2+Math.sin(t*0.3)*0.25,7+Math.cos(a)*0.8);cam.lookAt(0,1.4,-3);
+    R.render(scene,cam);requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
 </script>
 </body>
 </html>
