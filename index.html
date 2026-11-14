@@ -203,6 +203,9 @@ body.has3d{background:#0b0520}
 @keyframes gpulse{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.08) rotate(3deg)}}
 @keyframes shine{0%{left:-70%}60%,100%{left:140%}}
 .go:active .b{transform:scale(.92)}
+.cat.wide{display:block;width:100%;padding:16px 10px;font-size:20px}
+.cat.wide .ci{font-size:30px}
+.cam-btn{margin-right:auto;font-size:12px;border:1.5px dashed var(--gold);color:var(--gold);border-radius:12px;padding:5px 10px;cursor:pointer;white-space:nowrap}
 .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .dbtn{padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid transparent;text-align:right;font-size:11.5px;color:var(--mut);line-height:1.3}
 .dbtn b{display:block;font-size:15px;color:#fff;font-family:'Secular One';font-weight:400}
@@ -297,6 +300,7 @@ body.has3d{background:#0b0520}
   </div>
   <div class="card">
     <h3>בחרו קטגוריה</h3>
+    <div id="catsTop" style="margin-top:10px"></div>
     <div class="cats-h">🎯 נושאים</div>
     <div class="grid2" id="catsTheme"></div>
     <div class="cats-h">🎲 מיקסים</div>
@@ -464,6 +468,11 @@ const MIXES=[
 (function(){const seen=new Set();MIXES[0].list=[];INTL.forEach(c=>c.list.forEach(e=>{const k=(e[0]+'|'+e[1]).toLowerCase();if(!seen.has(k)){seen.add(k);MIXES[0].list.push(e)}}));
  const sa=new Set();MIXES[1].artists=[];ISR.forEach(c=>c.artists.forEach(a=>{if(!sa.has(a[0])){sa.add(a[0]);MIXES[1].artists.push(a)}}))})();
 THEMES.concat(MIXES).forEach(c=>CATS[c.id]=c);
+const ALLCAT={id:'all',icon:'🎰',label:'הכול מעורבב',sub:'לועזי וישראלי · כל התקופות · כל הסגנונות',color:'linear-gradient(100deg,#FF4F9A,#8B7BFF,#2EE6B5,#FFC83D)',type:'all',country:'US',group:'מיקס',wide:true};
+(function(){const seen=new Set();ALLCAT.list=[];INTL.concat(THEMES.filter(t=>t.type==='song')).forEach(c=>c.list.forEach(e=>{const k=(e[0]+'|'+e[1]).toLowerCase();if(!seen.has(k)){seen.add(k);ALLCAT.list.push(e)}}));
+ const sa=new Set();ALLCAT.artists=[];ISR.concat(THEMES.filter(t=>t.type==='artist')).forEach(c=>c.artists.forEach(a=>{if(!sa.has(a[0])){sa.add(a[0]);ALLCAT.artists.push(a)}}))})();
+CATS.all=ALLCAT;
+const isHe=t=>/[\u05d0-\u05ea]/.test(t||'');
 
 const AVATARS=['🎸','🎤','🥁','🎷','🎹','🎺','🎻','🪗','🪕','🎧'];
 const PCOLORS=['#FFC83D','#2EE6B5','#FF4F9A','#8B7BFF','#FF7A3D','#5EC8FF','#B6F36B','#FF9EDB','#C9A7FF','#7DF9FF'];
@@ -559,33 +568,52 @@ async function artistTracks(cat,pair){
   return rs.map(r=>({url:r.previewUrl,title:cleanTitle(r.trackName),artist:he,artistId:r.artistId,trackId:r.trackId,truthT:[cleanTitle(r.trackName),r.trackName],truthA:[he,en,r.artistName],opt:{t:cleanTitle(r.trackName),a:he}}));
 }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function notUsed(t){return !H.used||!H.used.has(norm(cleanTitle(t)))}
+async function fetchSongs(cat,list,first,onProg){
+  const out=[];let i=0;
+  while(i<list.length&&out.length<first){
+    const rs=await Promise.all(list.slice(i,i+3).map(e=>findSong(cat,e).catch(()=>null)));i+=3;
+    rs.forEach(r=>{if(r)out.push(r)});onProg&&onProg(Math.min(1,out.length/Math.max(1,first)));
+  }
+  return {out,rest:list.slice(i)};
+}
+async function fetchArtists(cat,artists,want,onProg){
+  const arts=shuffle(artists.slice());const by=[];
+  for(let i=0;i<arts.length&&by.length<want;i+=3){
+    const rs=await Promise.all(arts.slice(i,i+3).map(p=>artistTracks(cat,p).catch(()=>[])));
+    rs.forEach(r=>{const f=r.filter(t=>notUsed(t.title));const use=f.length>=2?f:r;if(use.length>=2)by.push(shuffle(use.slice(0,8)))});onProg&&onProg(Math.min(1,by.length/Math.max(1,want)));
+  }
+  return by;
+}
+function roundRobin(by,n){const out=[];let k=0,guard=0;while(out.length<n&&by.length&&guard<800){const l=by[k%by.length];if(l.length)out.push(l.shift());k++;guard++;if(by.every(x=>!x.length))break}return out}
 async function prepareTracks(cat,n,onProg){
   if(cat.type==='song'){
-    const list=shuffle(cat.list.slice());const out=[];const first=Math.min(n,6);let i=0;
-    while(i<list.length&&out.length<first){
-      const rs=await Promise.all(list.slice(i,i+3).map(e=>findSong(cat,e).catch(()=>null)));i+=3;
-      rs.forEach(r=>{if(r)out.push(r)});onProg(Math.min(1,out.length/first));
-    }
-    const pool=cat.list.map(e=>({t:cleanTitle(e[0]),a:e[1]}));
-    return {tracks:out,pool,rest:list.slice(i)};
-  }else{
-    const arts=shuffle(cat.artists.slice());const want=Math.min(arts.length,8);
-    const by=[];
-    for(let i=0;i<arts.length&&by.length<want;i+=3){
-      const rs=await Promise.all(arts.slice(i,i+3).map(p=>artistTracks(cat,p).catch(()=>[])));
-      rs.forEach(r=>{if(r.length>=2)by.push(shuffle(r.slice(0,8)))});onProg(Math.min(1,by.length/want));
-    }
+    let list=shuffle(cat.list.filter(e=>notUsed(e[0])));if(list.length<n)list=shuffle(cat.list.slice());
+    const {out,rest}=await fetchSongs(cat,list,Math.min(n,6),onProg);
+    return {tracks:out,pool:cat.list.map(e=>({t:cleanTitle(e[0]),a:e[1]})),rest};
+  }else if(cat.type==='artist'){
+    const by=await fetchArtists(cat,cat.artists,Math.min(cat.artists.length,8),onProg);
     const pool=[];by.forEach(l=>l.forEach(t=>pool.push(t.opt)));
-    const out=[];let k=0,guard=0;
-    while(out.length<n&&by.length&&guard<800){const l=by[k%by.length];if(l.length)out.push(l.shift());k++;guard++;if(by.every(x=>!x.length))break}
-    return {tracks:out,pool,rest:[]};
+    return {tracks:roundRobin(by,n),pool,rest:[]};
+  }else{
+    const nIL=Math.max(1,Math.round(n*0.4)),nEN=n-nIL;
+    let list=shuffle(cat.list.filter(e=>notUsed(e[0])));if(list.length<nEN)list=shuffle(cat.list.slice());
+    const en=await fetchSongs(cat,list,Math.min(nEN,5),f=>onProg(f*0.5));
+    const by=await fetchArtists({country:'IL'},cat.artists,Math.min(cat.artists.length,Math.ceil(nIL/2)+1),f=>onProg(0.5+f*0.5));
+    const ilPool=[];by.forEach(l=>l.forEach(t=>ilPool.push(t.opt)));
+    const il=roundRobin(by.map(l=>l.slice(0,2)),nIL);
+    const sched=shuffle(Array(nEN).fill('en').concat(Array(nIL).fill('il')));
+    const enPool=shuffle(cat.list.slice()).slice(0,120).map(e=>({t:cleanTitle(e[0]),a:e[1]}));
+    return {tracks:[],q:{en:en.out,il},sched,pool:enPool.concat(ilPool),rest:en.rest,ok:en.out.length+il.length};
   }
 }
 async function bgFill(cat,n,gid){
-  while(S&&S.gid===gid&&H.tracks.length<n&&H.rest.length){
+  const tgt=()=>H.q?H.q.en:H.tracks;
+  const need=()=>H.q?(H.sched.slice(S.turn).filter(x=>x==='en').length-H.q.en.length):(n-H.tracks.length);
+  while(S&&S.gid===gid&&need()>0&&H.rest.length){
     await sleep(2200);if(!S||S.gid!==gid)return;
     const e=H.rest.shift();if(!e)return;
-    try{const r=await findSong(cat,e);if(r&&S&&S.gid===gid)H.tracks.push(r)}catch(x){}
+    try{const r=await findSong(cat,e);if(r&&S&&S.gid===gid)tgt().push(r)}catch(x){}
   }
 }
 
@@ -754,21 +782,28 @@ function handleAction(from,a){
 async function startGame(){
   if(!S.cat){toast('בחרו קטגוריה');return}
   S.players=S.players.filter(p=>p.on);S.players.forEach(p=>{p.score=0;p.ll=LL0()});
-  if(!S.series||!S.series.games.length)S.series={games:[],names:{}};
+  if(!S.series||!S.series.games.length){S.series={games:[],names:{}};H.used=new Set()}
+  if(!H.used)H.used=new Set();
   S.curDiff=gameDiff();const D=DIFFS[S.curDiff];S.ansMs=D.ans;S.listen=D.listen;S.mult=D.mult;
   S.total=S.perGame||TOTAL_SONGS;S.turn=0;S.phase='loading';S.load=0;S.gid=rid(6);broadcast();
   const cat=CATS[S.cat];let res;
   try{res=await prepareTracks(cat,S.total,f=>{S.load=f;broadcast()})}catch(e){res={tracks:[],pool:[]}}
-  if(!res.tracks.length){S.phase='lobby';broadcast();toast('לא הצלחנו לטעון שירים. בדקו את החיבור ונסו שוב.',4000);return}
-  H.tracks=res.tracks;H.pool=res.pool;H.rest=res.rest||[];bgFill(cat,S.total,S.gid);startTurn();
+  if(!(res.ok||res.tracks.length)){S.phase='lobby';broadcast();toast('לא הצלחנו לטעון שירים. בדקו את החיבור ונסו שוב.',4000);return}
+  H.tracks=res.tracks;H.pool=res.pool;H.rest=res.rest||[];H.q=res.q||null;H.sched=res.sched||null;bgFill(cat,S.total,S.gid);startTurn();
 }
 async function startTurn(){
   if(S.turn>=S.total){endGame();return}
   let T=H.tracks[S.turn];
+  if(!T&&H.q){const kind=H.sched[S.turn]||'en';let src=kind==='il'?H.q.il:H.q.en;
+    if(!src.length&&kind==='en'){while(!src.length&&H.rest.length){const r=await findSong(CATS[S.cat],H.rest.shift()).catch(()=>null);if(r)src.push(r)}}
+    if(!src.length)src=H.q.il.length?H.q.il:H.q.en;
+    T=src.shift();if(T)H.tracks[S.turn]=T;}
   if(!T){const cat=CATS[S.cat];
     while(!H.tracks[S.turn]&&H.rest&&H.rest.length){const r=await findSong(cat,H.rest.shift()).catch(()=>null);if(r)H.tracks.push(r)}
-    T=H.tracks[S.turn]||H.tracks[Math.floor(Math.random()*H.tracks.length)];H.tracks[S.turn]=T;
+    T=H.tracks[S.turn]||H.tracks.filter(Boolean)[Math.floor(Math.random()*H.tracks.filter(Boolean).length)];H.tracks[S.turn]=T;
   }
+  if(!T){endGame();return}
+  if(H.used)H.used.add(norm(cleanTitle(T.title)));
   H.ans={};
   const D=DIFFS[S.curDiff]||DIFFS.med;const st=D.rnd?Math.round(2+Math.random()*Math.max(1,28-D.listen/1000-3)):0;
   S.phase='turn';S.deadline=Date.now()+(S.ansMs||TURN_MS);S.play={k:rid(6),url:T.url,start:st,len:D.listen};S.mc=makeOptions(T);
@@ -800,7 +835,8 @@ async function useLifeline(id,a){
   }
 }
 function makeOptions(T){
-  const others=shuffle(H.pool.filter(o=>norm(o.t)!==norm(T.opt.t)));
+  const he=isHe(T.opt.t);const all=shuffle(H.pool.filter(o=>norm(o.t)!==norm(T.opt.t)));
+  const same=all.filter(o=>isHe(o.t)===he);const others=same.length>=3?same.concat(all.filter(o=>isHe(o.t)!==he)):all;
   const uniq=[];
   if(DIFFS[S.curDiff]&&DIFFS[S.curDiff].similar)others.filter(o=>norm(o.a)===norm(T.opt.a)).forEach(o=>{if(uniq.length<2&&!uniq.some(u=>norm(u.t)===norm(o.t)))uniq.push(o)});
   others.forEach(o=>{if(uniq.length<3&&!uniq.some(u=>norm(u.t)===norm(o.t))&&norm(o.a)!==norm(T.opt.a))uniq.push(o)});
@@ -833,7 +869,7 @@ function endGame(){
   S.series.games.push({cat:S.cat,diff:S.curDiff,sc});
   S.endK=rid(6);S.phase=S.series.games.length>=(S.seriesLen||1)?'end':'between';broadcast();
 }
-function nextGame(){if(!isHost||S.phase!=='between')return;S.phase='lobby';S.cat=null;broadcast()}
+function nextGame(){if(!isHost||S.phase!=='between')return;unlockAudio();startGame()}
 function backToLobby(){S.phase='lobby';S.cat=null;S.series={games:[],names:{}};S.players.forEach(p=>{p.score=0});S.players=S.players.filter(p=>p.on);broadcast()}
 
 /* ========== תצוגה ========== */
@@ -844,7 +880,7 @@ function render(){
   if(S.phase==='switch')return;
   ({lobby:renderLobby,loading:renderLoading,turn:renderGame,reveal:renderGame,end:renderEnd,between:renderBetween}[S.phase]||renderLobby)();
 }
-function catBtn(c){return `<button class="cat ${S.cat===c.id?'sel':''} ${isHost?'':'dis'}" data-cat="${c.id}" style="background:${c.color};color:${['#FFC83D','#2EE6B5','#5EC8FF'].includes(c.color)?'#1d1640':'#fff'}">${c.icon?`<span class="ci">${c.icon}</span>`:''}${c.label}<small>${esc(c.sub||c.group)}</small></button>`}
+function catBtn(c){return `<button class="cat ${c.wide?'wide':''} ${S.cat===c.id?'sel':''} ${(isHost&&!((S.series&&S.series.games.length)))?'':'dis'}" data-cat="${c.id}" style="background:${c.color};color:${['#FFC83D','#2EE6B5','#5EC8FF'].includes(c.color)?'#1d1640':'#fff'}">${c.icon?`<span class="ci">${c.icon}</span>`:''}${c.label}<small>${esc(c.sub||c.group)}</small></button>`}
 function inviteText(){const link=location.href.split('#')[0]+'#'+S.code;return 'בוא/י לשחק איתי "נחש את הלהיט"! 🎵\nקוד חדר: '+S.code+'\n'+link}
 function renderLobby(){
   showScreen('lobby');closeModals();stopAudio();
@@ -852,9 +888,9 @@ function renderLobby(){
   $('#waLink').href='https://wa.me/?text='+encodeURIComponent(inviteText());$('#shareBtn').classList.toggle('hidden',!navigator.share);
   const list=S.players.slice().sort((a,b)=>(b.id===S.host)-(a.id===S.host)||(b.on-a.on));
   $('#lobbyPlayers').className='in-room';
-  $('#lobbyPlayers').innerHTML=list.map(p=>`<div class="rm ${p.on?'':'off'}"><span class="dot"></span>${avH(p,'mid')}<span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}</span>${p.id===S.host?'<span class="host">👑 מארח</span>':''}<span class="tag2">${p.on?'מחובר':'התנתק'}</span></div>`).join('');
+  $('#lobbyPlayers').innerHTML=list.map(p=>`<div class="rm ${p.on?'':'off'}"><span class="dot"></span>${avH(p,'mid')}<span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}</span>${p.id===S.host?'<span class="host">👑 מארח</span>':''}${p.id===me.id?`<label for="photoInp" class="cam-btn">📷 ${me.photo?'החלף':'הוסף'} תמונה</label>`:''}<span class="tag2">${p.on?'מחובר':'התנתק'}</span></div>`).join('');
   $('#pCount').textContent='('+S.players.filter(p=>p.on).length+')';
-  $('#catsTheme').innerHTML=THEMES.map(catBtn).join('');$('#catsMix').innerHTML=MIXES.map(catBtn).join('');$('#catsIntl').innerHTML=INTL.map(catBtn).join('');$('#catsIl').innerHTML=ISR.map(catBtn).join('');
+  $('#catsTop').innerHTML=catBtn(ALLCAT);$('#catsTheme').innerHTML=THEMES.map(catBtn).join('');$('#catsMix').innerHTML=MIXES.map(catBtn).join('');$('#catsIntl').innerHTML=INTL.map(catBtn).join('');$('#catsIl').innerHTML=ISR.map(catBtn).join('');
   const played=(S.series&&S.series.games.length)||0;const lockSet=!isHost||played>0;
   $('#diffSeg').className='dgrid'+(lockSet?' ro':'');
   $('#diffSeg').innerHTML=Object.keys(DIFFS).map(k=>{const d=DIFFS[k];return `<button class="dbtn ${S.diff===k?'on':''}" data-diff="${k}"><b>${d.icon} ${d.label}</b>${d.desc}</button>`}).join('')+`<button class="dbtn wide ${S.diff==='stairs'?'on':''}" data-diff="stairs"><b>📈 מדרגות</b>כל משחק בסדרה קשה יותר: קל ← בינוני ← קשה ← אלוף</button>`;
@@ -932,14 +968,15 @@ function renderBetween(){
   showScreen('between');closeModals();
   const n=S.series.games.length,g=S.series.games[n-1];const nd=DIFFS[gameDiff()];
   $('#btTitle').textContent=`סוף משחק ${n} מתוך ${S.seriesLen}`;
-  $('#btSub').textContent=`הבא: ${nd.icon} ${nd.label}`;
+  const cc=CATS[S.cat];$('#btSub').textContent=`הבא: ${cc?cc.icon||'':''} ${cc?cc.label:''} · ${nd.icon} ${nd.label}`;
+  $('#btNext').textContent=`▶ התחל משחק ${n+1}`;
   const wid=Object.keys(g.sc).sort((a,b)=>g.sc[b]-g.sc[a])[0];
   if(L.endK!==S.endK){L.endK=S.endK;stopAudio();
     $('#btSinger').innerHTML=singerSVG('happy');const txt=`כל הכבוד, ${pName(wid)}! ניצחת במשחק ${n}`;
     $('#btSpeech').textContent=txt;sfx.win();confetti(180);window.bg3d&&bg3d.celebrate();setTimeout(()=>say(txt,$('#btSinger .singer')),400)}
   $('#btTable').innerHTML='<h3 style="margin-bottom:6px">טבלת הסדרה</h3>'+standingsHTML(seriesRank());
   $('#btNext').classList.toggle('hidden',!isHost);
-  $('#btWait').textContent=isHost?'':`מחכים ש${pName(S.host)} יבחר קטגוריה למשחק הבא...`;
+  $('#btWait').textContent=isHost?'':`מחכים ש${pName(S.host)} יתחיל את משחק ${n+1}...`;
 }
 function renderEnd(){
   showScreen('end');closeModals();
@@ -988,7 +1025,7 @@ $('#goChange').onclick=()=>{if(isHost){S.cat=null;broadcast()}};
 function showMyPhoto(){const pp=$('#photoPick');pp.querySelectorAll('img').forEach(i=>i.remove());if(me.photo){const im=new Image();im.src=me.photo;pp.appendChild(im);pp.classList.add('has')}else pp.classList.remove('has');$('#homeAv').innerHTML=me.photo?`<img class="pav mid" src="${me.photo}" alt="">`:''}
 function pubPhoto(){if(client&&base)try{client.publish(base+'/photo/'+me.id,me.photo||'',{qos:1,retain:true})}catch(e){}}
 $('#photoInp').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();
-  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const m=Math.min(img.naturalWidth,img.naturalHeight);g.drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2,m,m,0,0,128,128);me.photo=c.toDataURL('image/jpeg',0.75);LS.set('nhh_photo',me.photo);URL.revokeObjectURL(url);showMyPhoto();pubPhoto();sfx.ll();toast('התמונה נשמרה!')};
+  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const m=Math.min(img.naturalWidth,img.naturalHeight);g.drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2,m,m,0,0,128,128);me.photo=c.toDataURL('image/jpeg',0.75);LS.set('nhh_photo',me.photo);URL.revokeObjectURL(url);showMyPhoto();pubPhoto();sfx.ll();toast('התמונה נשמרה!');if(S)render()};
   img.onerror=()=>{URL.revokeObjectURL(url);toast('לא הצלחנו לקרוא את התמונה. נסו תמונה אחרת.')};img.src=url;e.target.value=''});
 document.addEventListener('click',e=>{
   const c=e.target.closest('.cat');if(c&&isHost&&S&&S.phase==='lobby'){S.cat=c.dataset.cat;sfx.click();broadcast()}
