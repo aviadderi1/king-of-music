@@ -205,6 +205,28 @@ body.has3d{background:#0b0520}
 .go:active .b{transform:scale(.92)}
 .cat.wide{display:block;width:100%;padding:16px 10px;font-size:20px}
 .cat.wide .ci{font-size:30px}
+.my-av{position:relative;display:inline-flex;cursor:pointer;flex-shrink:0;line-height:1}
+.my-av .cam-badge{position:absolute;bottom:-5px;left:-6px;background:var(--gold);border-radius:50%;width:17px;height:17px;font-size:9.5px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.my-av:active{transform:scale(.92)}
+.av.mid{font-size:24px}
+.photo-hint{font-size:11px;color:var(--gold);margin-right:auto}
+.voted{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
+.voted .vt{text-align:center;font-size:14px;font-weight:500}
+.voted .vt b{color:var(--teal)}
+.voted .vbar{height:6px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;margin:6px 0 10px}
+.voted .vbar div{height:100%;background:linear-gradient(90deg,var(--teal),#9FE1CB);transition:width .4s}
+.voted .vlist{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.voted .v{width:58px;text-align:center;font-size:11.5px;transition:opacity .3s}
+.voted .v .ph{position:relative;display:inline-flex;width:44px;height:44px;border-radius:50%;align-items:center;justify-content:center;background:rgba(255,255,255,.08);margin-bottom:2px}
+.voted .v .ph .pav{width:44px;height:44px;border:0}
+.voted .v .ph .av{font-size:26px}
+.voted .v.ok .ph{box-shadow:0 0 0 3px var(--teal),0 0 14px rgba(46,230,181,.5)}
+.voted .v.ok .ph::after{content:"✔";position:absolute;bottom:-4px;left:-4px;background:#1D9E75;color:#fff;border-radius:50%;width:19px;height:19px;font-size:11px;display:flex;align-items:center;justify-content:center}
+.voted .v.wait{opacity:.5}
+.voted .v.to .ph::after{content:"⏰";position:absolute;bottom:-4px;left:-4px;font-size:13px}
+.voted .v .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.voted .v.pop .ph{animation:vpop .5s cubic-bezier(.3,1.8,.5,1)}
+@keyframes vpop{0%{transform:scale(.6)}100%{transform:scale(1)}}
 .cam-btn{margin-right:auto;font-size:12px;border:1.5px dashed var(--gold);color:var(--gold);border-radius:12px;padding:5px 10px;cursor:pointer;white-space:nowrap}
 .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .dbtn{padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid transparent;text-align:right;font-size:11.5px;color:var(--mut);line-height:1.3}
@@ -347,6 +369,7 @@ body.has3d{background:#0b0520}
       <div id="ansArea">
         <div class="mc" id="mcBox"></div>
         <button class="change-btn hidden" id="changeAns">↩ התחרטתי – שנה תשובה</button>
+        <div class="voted" id="votedBar"></div>
         <div class="lls" id="lls">
           <button class="ll" data-ll="half"><span class="ic">✂️</span>50:50</button>
           <button class="ll" data-ll="more"><span class="ic">🎵</span>עוד שיר</button>
@@ -621,7 +644,19 @@ async function bgFill(cat,n,gid){
 const aud=$('#aud');let actx=null;
 function ac(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(actx&&actx.state==='suspended')actx.resume();return actx}
 function tone(freqs,dur,type,gap,vol){const c=ac();if(!c)return;freqs.forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.type=type||'triangle';o.frequency.value=f;const t0=c.currentTime+i*(gap||0.1);g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol||0.25,t0+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);o.connect(g).connect(c.destination);o.start(t0);o.stop(t0+dur+0.05)})}
-const sfx={win(){tone([523,659,784,1047,1319],0.35,'triangle',0.09,0.22)},half(){tone([523,659,784],0.3,'triangle',0.1)},lose(){tone([196,165,139],0.45,'sawtooth',0.18,0.12)},click(){tone([880],0.06,'square',0,0.05)},ll(){tone([660,990],0.15,'sine',0.07,0.2)}};
+function brass(c,freq,t0,dur,vol){const o=c.createOscillator(),o2=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();o.type='sawtooth';o2.type='sawtooth';o.frequency.value=freq;o2.frequency.value=freq*1.005;
+  f.type='lowpass';f.Q.value=1.5;f.frequency.setValueAtTime(freq*1.2,t0);f.frequency.linearRampToValueAtTime(freq*7,t0+0.05);f.frequency.linearRampToValueAtTime(freq*3.5,t0+dur);
+  g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+0.035);g.gain.setValueAtTime(vol,Math.max(t0+0.04,t0+dur-0.05));g.gain.exponentialRampToValueAtTime(0.0001,t0+dur+0.08);
+  const lfo=c.createOscillator(),lg=c.createGain();lfo.frequency.value=5.5;lg.gain.setValueAtTime(0,t0);lg.gain.linearRampToValueAtTime(dur>0.4?freq*0.012:0,t0+0.3);lfo.connect(lg);lg.connect(o.frequency);lg.connect(o2.frequency);
+  o.connect(f);o2.connect(f);f.connect(g).connect(c.destination);[o,o2,lfo].forEach(x=>{x.start(t0);x.stop(t0+dur+0.15)})}
+function fanfare(){const c=ac();if(!c)return 0;const t=c.currentTime+0.08;
+  const mel=[[392,0,.13],[392,.15,.13],[392,.30,.13],[523,.45,.55],[392,1.05,.22],[523,1.30,.16],[659,1.48,.16],[784,1.66,1.3]];
+  mel.forEach(([f,o,d])=>{brass(c,f,t+o,d,0.13);brass(c,f/2,t+o,d,0.05)});
+  [[523,1.66],[659,1.66]].forEach(([f,o])=>brass(c,f,t+o,1.3,0.07));
+  const n=c.createBufferSource(),b=c.createBuffer(1,c.sampleRate*1.5,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+  const ng=c.createGain(),nf=c.createBiquadFilter();nf.type='highpass';nf.frequency.value=5000;ng.gain.value=0.12;n.buffer=b;n.connect(nf).connect(ng).connect(c.destination);n.start(t+1.66);
+  return 3100}
+const sfx={tick(){tone([1320,1760],0.07,'sine',0.05,0.12)},win(){tone([523,659,784,1047,1319],0.35,'triangle',0.09,0.22)},half(){tone([523,659,784],0.3,'triangle',0.1)},lose(){tone([196,165,139],0.45,'sawtooth',0.18,0.12)},click(){tone([880],0.06,'square',0,0.05)},ll(){tone([660,990],0.15,'sine',0.07,0.2)}};
 function unlockAudio(){ac();try{aud.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';aud.play().catch(()=>{})}catch(e){}try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
 let curPlayUrl=null;
 let segT=null,segLen=0,segStart=0;
@@ -873,7 +908,8 @@ function nextGame(){if(!isHost||S.phase!=='between')return;unlockAudio();startGa
 function backToLobby(){S.phase='lobby';S.cat=null;S.series={games:[],names:{}};S.players.forEach(p=>{p.score=0});S.players=S.players.filter(p=>p.on);broadcast()}
 
 /* ========== תצוגה ========== */
-function avH(p,cls){if(!p)return '';const ph=p.id===me.id?me.photo:PHOTOS[p.id];return ph?`<img class="pav ${cls||''}" src="${ph}" alt="">`:`<span class="av">${p.av||'🎵'}</span>`}
+function avH(p,cls,noTap){if(!p)return '';const ph=p.id===me.id?me.photo:PHOTOS[p.id];const inner=ph?`<img class="pav ${cls||''}" src="${ph}" alt="">`:`<span class="av ${cls||''}">${p.av||'🎵'}</span>`;
+  return (p.id===me.id&&!noTap)?`<label for="photoInp" class="my-av" title="הקש להחלפת תמונה">${inner}<span class="cam-badge">📷</span></label>`:inner}
 function chip(p,extra,st){return `<div class="pchip ${p.on?'':'off'} ${extra||''}" style="border-color:${p.col}">${avH(p)}${esc(p.name)}${p.id===S.host?' 👑':''}${S.phase!=='lobby'?`<span class="sc">${p.score}</span>`:''}${st?`<span class="st">${st}</span>`:''}</div>`}
 function render(){
   if(!S){$('#goWrap').classList.remove('on');showScreen(me.name?'home':'name');return}
@@ -888,7 +924,7 @@ function renderLobby(){
   $('#waLink').href='https://wa.me/?text='+encodeURIComponent(inviteText());$('#shareBtn').classList.toggle('hidden',!navigator.share);
   const list=S.players.slice().sort((a,b)=>(b.id===S.host)-(a.id===S.host)||(b.on-a.on));
   $('#lobbyPlayers').className='in-room';
-  $('#lobbyPlayers').innerHTML=list.map(p=>`<div class="rm ${p.on?'':'off'}"><span class="dot"></span>${avH(p,'mid')}<span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}</span>${p.id===S.host?'<span class="host">👑 מארח</span>':''}${p.id===me.id?`<label for="photoInp" class="cam-btn">📷 ${me.photo?'החלף':'הוסף'} תמונה</label>`:''}<span class="tag2">${p.on?'מחובר':'התנתק'}</span></div>`).join('');
+  $('#lobbyPlayers').innerHTML=list.map(p=>`<div class="rm ${p.on?'':'off'}"><span class="dot"></span>${avH(p,'mid')}<span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}</span>${p.id===S.host?'<span class="host">👑 מארח</span>':''}${p.id===me.id&&!me.photo?'<span class="photo-hint">הקש על התמונה להוספה</span>':''}<span class="tag2">${p.on?'מחובר':'התנתק'}</span></div>`).join('');
   $('#pCount').textContent='('+S.players.filter(p=>p.on).length+')';
   $('#catsTop').innerHTML=catBtn(ALLCAT);$('#catsTheme').innerHTML=THEMES.map(catBtn).join('');$('#catsMix').innerHTML=MIXES.map(catBtn).join('');$('#catsIntl').innerHTML=INTL.map(catBtn).join('');$('#catsIl').innerHTML=ISR.map(catBtn).join('');
   const played=(S.series&&S.series.games.length)||0;const lockSet=!isHost||played>0;
@@ -924,6 +960,12 @@ function renderGame(){
   const mk=tk+'|'+myRm.join(',')+'|'+(done?1:0);
   if(L.mcK!==mk){L.mcK=mk;$('#mcBox').innerHTML=optsHTML(S.mc||[],myRm);if(L.myPick!=null){const b=$('#mcBox button[data-i="'+L.myPick+'"]');if(b)b.classList.add('picked')}}
   $('#mcBox').classList.toggle('locked',!!done||L.myPick!=null);
+  {const act=activePlayers();const nv=act.filter(p=>S.done[p.id]===true).length;
+   if(!L.voted||L.voted.k!==tk)L.voted={k:tk,set:new Set()};const fresh=[];
+   act.forEach(p=>{if(S.done[p.id]===true&&!L.voted.set.has(p.id)){L.voted.set.add(p.id);fresh.push(p.id)}});
+   [...L.voted.set].forEach(id=>{if(S.done[id]!==true)L.voted.set.delete(id)});
+   if(fresh.some(id=>id!==me.id))sfx.tick();
+   $('#votedBar').innerHTML=`<div class="vt">הצביעו <b>${nv}</b> מתוך ${act.length}</div><div class="vbar"><div style="width:${act.length?Math.round(nv/act.length*100):0}%"></div></div><div class="vlist">`+act.map(p=>{const d=S.done[p.id];const c=d===true?'ok':d==='t'?'to':'wait';return `<div class="v ${c} ${fresh.includes(p.id)?'pop':''}"><span class="ph">${avH(p,'',true)}</span><div class="nm">${esc(p.name)}</div>${c==='wait'?'<div>🤔</div>':''}</div>`}).join('')+'</div>'}
   $('#changeAns').classList.toggle('hidden',!(done===true||(L.myPick!=null&&!done)));
   const p=pById(me.id);
   document.querySelectorAll('.ll').forEach(b=>{const k=b.dataset.ll;let used=!(p&&p.ll[k])||!!done;if(k==='friend'&&!S.players.some(x=>x.on&&x.id!==me.id))used=true;b.classList.toggle('used',used&&!(k==='dbl'&&S.dbl&&S.dbl[me.id]));b.classList.toggle('active',k==='dbl'&&!!(S.dbl&&S.dbl[me.id]))});
@@ -986,9 +1028,9 @@ function renderEnd(){
   $('#endTitle').textContent=multi?'🏆 סוף הסדרה!':'סוף המשחק!';
   if(L.endK!==S.endK){L.endK=S.endK;stopAudio();
     $('#endSinger').innerHTML=singerSVG('happy');const txt=w?`כל הכבוד, ${w.name}! ${multi?'אלוף הסדרה':'אלוף הלהיטים'}!`:'כל הכבוד!';
-    $('#endSpeech').textContent=txt;sfx.win();confetti(280);window.bg3d&&bg3d.celebrate();
+    $('#endSpeech').textContent=txt;const fd=fanfare()||0;if(!fd)sfx.win();confetti(280);window.bg3d&&bg3d.celebrate();
     [900,1800,2700,3600].forEach(t=>setTimeout(()=>{confetti(140);window.bg3d&&bg3d.celebrate()},t));
-    setTimeout(()=>say(txt,$('#endSinger .singer')),400)}
+    setTimeout(()=>say(txt,$('#endSinger .singer')),(fd||0)+300)}
   const pod=[rank[1],rank[0],rank[2]],hts=[90,130,65],cols=['#C9C9D9','#FFC83D','#E09B5A'],place=[2,1,3],tro=['🥈','🏆','🥉'];
   $('#podium').innerHTML=pod.map((r,i)=>r?`<div class="pod"><span class="trophy">${tro[i]}</span><div class="av">${avH(P(r),'big')}</div><div class="nm">${esc(P(r).name)}</div><div class="blk" style="height:${hts[i]}px;background:${cols[i]};color:#26215C">${place[i]}<div style="font-family:Rubik;font-size:13px">${r.total.toLocaleString()}</div></div></div>`:'<div class="pod"></div>').join('');
   const gl=S.series.games.map((g,i)=>`${i+1}. ${DIFFS[g.diff]?DIFFS[g.diff].icon:''} ${CATS[g.cat]?CATS[g.cat].label:''}`).join(' · ');
@@ -1022,7 +1064,7 @@ $('#copyLink').onclick=()=>{copyText(inviteText()).then(()=>toast('הקוד וה
 $('#shareBtn').onclick=()=>{try{navigator.share({title:'נחש את הלהיט',text:inviteText()}).catch(()=>{})}catch(e){}};
 $('#goBtn').onclick=()=>{unlockAudio();sfx.win();$('#goWrap').classList.remove('on');if(isHost)startGame()};
 $('#goChange').onclick=()=>{if(isHost){S.cat=null;broadcast()}};
-function showMyPhoto(){const pp=$('#photoPick');pp.querySelectorAll('img').forEach(i=>i.remove());if(me.photo){const im=new Image();im.src=me.photo;pp.appendChild(im);pp.classList.add('has')}else pp.classList.remove('has');$('#homeAv').innerHTML=me.photo?`<img class="pav mid" src="${me.photo}" alt="">`:''}
+function showMyPhoto(){const pp=$('#photoPick');pp.querySelectorAll('img').forEach(i=>i.remove());if(me.photo){const im=new Image();im.src=me.photo;pp.appendChild(im);pp.classList.add('has')}else pp.classList.remove('has');$('#homeAv').innerHTML=`<label for="photoInp" class="my-av">${me.photo?`<img class="pav mid" src="${me.photo}" alt="">`:'<span class="av mid">🙂</span>'}<span class="cam-badge">📷</span></label>`}
 function pubPhoto(){if(client&&base)try{client.publish(base+'/photo/'+me.id,me.photo||'',{qos:1,retain:true})}catch(e){}}
 $('#photoInp').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();
   img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const m=Math.min(img.naturalWidth,img.naturalHeight);g.drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2,m,m,0,0,128,128);me.photo=c.toDataURL('image/jpeg',0.75);LS.set('nhh_photo',me.photo);URL.revokeObjectURL(url);showMyPhoto();pubPhoto();sfx.ll();toast('התמונה נשמרה!');if(S)render()};
