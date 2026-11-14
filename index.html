@@ -203,6 +203,27 @@ body.has3d{background:#0b0520}
 @keyframes gpulse{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.08) rotate(3deg)}}
 @keyframes shine{0%{left:-70%}60%,100%{left:140%}}
 .go:active .b{transform:scale(.92)}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dbtn{padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid transparent;text-align:right;font-size:11.5px;color:var(--mut);line-height:1.3}
+.dbtn b{display:block;font-size:15px;color:#fff;font-family:'Secular One';font-weight:400}
+.dbtn.on{border-color:var(--gold);background:rgba(255,200,61,.14)}
+.dbtn.wide{grid-column:1 / -1}
+.seg{display:flex;gap:6px;justify-content:center}
+.seg button{min-width:44px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid var(--line);font-size:15px}
+.seg button.on{background:var(--gold);color:#3b2400;font-weight:700;border-color:var(--gold)}
+.ro button{pointer-events:none}.ro button:not(.on){opacity:.4}
+.series-info{background:rgba(255,200,61,.12);border:1px solid rgba(255,200,61,.4);border-radius:12px;padding:8px 12px;font-size:14px;margin:8px 0 2px;text-align:center}
+.series-info:empty{display:none}
+.st-row{display:flex;align-items:center;gap:8px;padding:9px 6px;border-bottom:1px solid var(--line)}
+.st-row .md{font-size:24px;width:32px;text-align:center}
+.st-row .nm{font-weight:700}
+.st-row .gs{flex:1;font-size:11.5px;color:var(--mut);text-align:left;direction:ltr}
+.st-row .tt{font-family:'Secular One';font-size:20px;color:var(--gold);min-width:56px;text-align:left}
+.st-row.first{background:rgba(255,200,61,.12);border-radius:12px;border-bottom:0}
+.trophy{font-size:44px;display:block;animation:tbob 1.5s ease-in-out infinite;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+.pod:nth-child(2) .trophy{font-size:64px}
+.pod:nth-child(1) .trophy{animation-delay:.3s}.pod:nth-child(3) .trophy{animation-delay:.6s}
+@keyframes tbob{0%,100%{transform:translateY(0) rotate(-4deg) scale(1)}50%{transform:translateY(-10px) rotate(4deg) scale(1.08)}}
 .wait-cat{font-family:'Secular One';font-size:20px;color:var(--gold)}
 </style>
 </head>
@@ -265,6 +286,16 @@ body.has3d{background:#0b0520}
     <div class="plist" id="lobbyPlayers"></div>
   </div>
   <div class="card">
+    <h3>הגדרות הסדרה</h3>
+    <div class="series-info" id="seriesInfo"></div>
+    <div class="cats-h">⚡ רמת קושי</div>
+    <div class="dgrid" id="diffSeg"></div>
+    <div class="row" style="gap:16px;justify-content:center;flex-wrap:wrap;margin-top:10px">
+      <div class="center"><div class="cats-h">🏁 משחקים בסדרה</div><div class="seg" id="seriesSeg"></div></div>
+      <div class="center"><div class="cats-h">🎵 שירים בכל משחק</div><div class="seg" id="perSeg"></div></div>
+    </div>
+  </div>
+  <div class="card">
     <h3>בחרו קטגוריה</h3>
     <div class="cats-h">🎯 נושאים</div>
     <div class="grid2" id="catsTheme"></div>
@@ -274,12 +305,11 @@ body.has3d{background:#0b0520}
     <div class="grid2" id="catsIntl"></div>
     <div class="cats-h">🇮🇱 להיטים ישראליים לפי תקופה</div>
     <div class="grid2" id="catsIl"></div>
-    <div class="cats-h center" style="margin-top:14px">🎵 20 שירים בכל משחק</div>
   </div>
   <div class="center mut" id="waitHost" style="margin-top:14px"></div>
   <div class="go-wrap" id="goWrap"><div class="go-card">
     <div class="go-cat" id="goCat"></div>
-    <div class="go-sub">20 שירים · מוכנים?</div>
+    <div class="go-sub" id="goSub"></div>
     <button class="go" id="goBtn" aria-label="התחל משחק"><span class="r"></span><span class="r r2"></span><span class="r r3"></span><span class="b"><span class="tri"></span>יאללה!</span></button>
     <button class="small-btn" id="goChange">החלף קטגוריה</button>
   </div></div>
@@ -345,8 +375,18 @@ body.has3d{background:#0b0520}
 </section>
 
 <!-- סוף -->
+<section class="screen" id="s-between">
+  <div class="logo"><h1 id="btTitle"></h1><div class="tag" id="btSub"></div></div>
+  <div class="singer-wrap" id="btSinger"></div>
+  <div class="center"><div class="speech" id="btSpeech"></div></div>
+  <div class="card" id="btTable"></div>
+  <button class="big-btn gold" id="btNext">למשחק הבא ←</button>
+  <div class="center mut" id="btWait" style="margin-top:10px"></div>
+  <button class="big-btn ghost" id="btExit">יציאה</button>
+</section>
+
 <section class="screen" id="s-end">
-  <div class="logo"><h1>סוף המשחק!</h1></div>
+  <div class="logo"><h1 id="endTitle">סוף המשחק!</h1></div>
   <div class="singer-wrap" id="endSinger"></div>
   <div class="center"><div class="speech" id="endSpeech"></div></div>
   <div class="podium" id="podium"></div>
@@ -428,6 +468,14 @@ THEMES.concat(MIXES).forEach(c=>CATS[c.id]=c);
 const AVATARS=['🎸','🎤','🥁','🎷','🎹','🎺','🎻','🪗','🪕','🎧'];
 const PCOLORS=['#FFC83D','#2EE6B5','#FF4F9A','#8B7BFF','#FF7A3D','#5EC8FF','#B6F36B','#FF9EDB','#C9A7FF','#7DF9FF'];
 const TOTAL_SONGS=20;
+const DIFFS={easy:{icon:'🟢',label:'קל',listen:30000,ans:45000,mult:1,desc:'30 שנ׳ שמיעה · 45 שנ׳ לענות · ×1'},
+ med:{icon:'🟡',label:'בינוני',listen:15000,ans:30000,mult:1.5,desc:'15 שנ׳ שמיעה · 30 שנ׳ לענות · ×1.5'},
+ hard:{icon:'🔴',label:'קשה',listen:8000,ans:20000,mult:2,rnd:true,desc:'8 שנ׳ ממקום אקראי · 20 שנ׳ · ×2'},
+ pro:{icon:'👑',label:'אלוף',listen:4000,ans:20000,mult:3,rnd:true,similar:true,desc:'4 שנ׳ · תשובות דומות · ×3'}};
+const STAIRS=['easy','med','hard','pro','pro'];
+function gameDiff(){return S.diff==='stairs'?STAIRS[Math.min(((S.series&&S.series.games.length)||0),4)]:(S.diff||'med')}
+function seriesTotal(id){return ((S.series&&S.series.games)||[]).reduce((a,g)=>a+(g.sc[id]||0),0)}
+const MEDALS=['🥇','🥈','🥉'];
 const TURN_MS=45000, HELP_MS=20000, REVEAL_AUTO_MS=15000;
 const BROKERS=['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://test.mosquitto.org:8081/mqtt'];
 const NS='adsound-nhh/v1/';
@@ -548,7 +596,12 @@ function tone(freqs,dur,type,gap,vol){const c=ac();if(!c)return;freqs.forEach((f
 const sfx={win(){tone([523,659,784,1047,1319],0.35,'triangle',0.09,0.22)},half(){tone([523,659,784],0.3,'triangle',0.1)},lose(){tone([196,165,139],0.45,'sawtooth',0.18,0.12)},click(){tone([880],0.06,'square',0,0.05)},ll(){tone([660,990],0.15,'sine',0.07,0.2)}};
 function unlockAudio(){ac();try{aud.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';aud.play().catch(()=>{})}catch(e){}try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
 let curPlayUrl=null;
-function playUrl(url){curPlayUrl=url;aud.src=url;aud.currentTime=0;aud.volume=1;const p=aud.play();if(p&&p.catch)p.catch(()=>{$('#tapAudio').classList.add('on')})}
+let segT=null,segLen=0,segStart=0;
+function playSeg(url,start,len){curPlayUrl=url;segStart=start||0;segLen=len||0;clearTimeout(segT);aud.src=url;aud.volume=1;
+  const go=()=>{try{if(segStart)aud.currentTime=segStart}catch(e){}const p=aud.play();if(p&&p.catch)p.catch(()=>{$('#tapAudio').classList.add('on')})};
+  if(segStart){aud.addEventListener('loadedmetadata',go,{once:true});try{aud.load()}catch(e){}}else{try{aud.currentTime=0}catch(e){}go()}}
+function playUrl(url){playSeg(url,0,0)}
+aud.addEventListener('playing',()=>{clearTimeout(segT);if(segLen&&segLen<30000){const rem=segLen-Math.max(0,(aud.currentTime-segStart)*1000);segT=setTimeout(()=>{try{aud.pause()}catch(e){}},Math.max(250,rem))}});
 function stopAudio(){try{aud.pause()}catch(e){}}
 aud.addEventListener('play',()=>{window.bg3d&&bg3d.setPlaying(true);$('#gVinyl').classList.add('spin');$('#eq').classList.add('on');$('#tapAudio').classList.remove('on')});
 ['pause','ended'].forEach(ev=>aud.addEventListener(ev,()=>{window.bg3d&&bg3d.setPlaying(false);$('#gVinyl').classList.remove('spin');$('#eq').classList.remove('on')}));
@@ -629,7 +682,7 @@ async function createRoom(){
   for(const url of BROKERS){try{client=await connectBroker(url);break}catch(e){client=null}}
   if(!client){showScreen('home');$('#homeErr').textContent='אין חיבור לשרת. בדקו אינטרנט ונסו שוב.';return}
   isHost=true;client.on('message',onMsg);client.subscribe([base+'/act',base+'/fx',base+'/photo/+']);pubPhoto();
-  S={gid:rid(6),v:0,code,host:me.id,phase:'lobby',cat:null,players:[],order:[],turn:0,log:[]};
+  S={gid:rid(6),v:0,code,host:me.id,phase:'lobby',cat:null,players:[],order:[],turn:0,log:[],diff:'med',seriesLen:3,perGame:15,series:{games:[],names:{}}};
   addPlayer(me.id,me.name);location.hash=code;
   hostTimer=setInterval(hostTick,300);broadcast();
 }
@@ -701,7 +754,9 @@ function handleAction(from,a){
 async function startGame(){
   if(!S.cat){toast('בחרו קטגוריה');return}
   S.players=S.players.filter(p=>p.on);S.players.forEach(p=>{p.score=0;p.ll=LL0()});
-  S.total=TOTAL_SONGS;S.turn=0;S.phase='loading';S.load=0;S.gid=rid(6);broadcast();
+  if(!S.series||!S.series.games.length)S.series={games:[],names:{}};
+  S.curDiff=gameDiff();const D=DIFFS[S.curDiff];S.ansMs=D.ans;S.listen=D.listen;S.mult=D.mult;
+  S.total=S.perGame||TOTAL_SONGS;S.turn=0;S.phase='loading';S.load=0;S.gid=rid(6);broadcast();
   const cat=CATS[S.cat];let res;
   try{res=await prepareTracks(cat,S.total,f=>{S.load=f;broadcast()})}catch(e){res={tracks:[],pool:[]}}
   if(!res.tracks.length){S.phase='lobby';broadcast();toast('לא הצלחנו לטעון שירים. בדקו את החיבור ונסו שוב.',4000);return}
@@ -715,7 +770,8 @@ async function startTurn(){
     T=H.tracks[S.turn]||H.tracks[Math.floor(Math.random()*H.tracks.length)];H.tracks[S.turn]=T;
   }
   H.ans={};
-  S.phase='turn';S.deadline=Date.now()+TURN_MS;S.play={k:rid(6),url:T.url};S.mc=makeOptions(T);
+  const D=DIFFS[S.curDiff]||DIFFS.med;const st=D.rnd?Math.round(2+Math.random()*Math.max(1,28-D.listen/1000-3)):0;
+  S.phase='turn';S.deadline=Date.now()+(S.ansMs||TURN_MS);S.play={k:rid(6),url:T.url,start:st,len:D.listen};S.mc=makeOptions(T);
   S.done={};S.rm={};S.ext={};S.dbl={};S.extra={};S.helps={};S.result=null;S.log=[];
   broadcast();
 }
@@ -746,6 +802,7 @@ async function useLifeline(id,a){
 function makeOptions(T){
   const others=shuffle(H.pool.filter(o=>norm(o.t)!==norm(T.opt.t)));
   const uniq=[];
+  if(DIFFS[S.curDiff]&&DIFFS[S.curDiff].similar)others.filter(o=>norm(o.a)===norm(T.opt.a)).forEach(o=>{if(uniq.length<2&&!uniq.some(u=>norm(u.t)===norm(o.t)))uniq.push(o)});
   others.forEach(o=>{if(uniq.length<3&&!uniq.some(u=>norm(u.t)===norm(o.t))&&norm(o.a)!==norm(T.opt.a))uniq.push(o)});
   others.forEach(o=>{if(uniq.length<3&&!uniq.some(u=>norm(u.t)===norm(o.t)))uniq.push(o)});
   const opts=shuffle([T.opt,...uniq]);H.correct=opts.indexOf(T.opt);return opts;
@@ -756,9 +813,10 @@ function endRound(){
   S.players.forEach(p=>{
     const a=H.ans[p.id];if(!a&&!S.done[p.id])return;
     const ok=!!a&&a.idx===H.correct;let pts=0;
-    if(ok){const total=TURN_MS+((S.ext[p.id])||0);const left=Math.max(0,myDeadline(p.id)-a.at);pts=100+Math.round(40*Math.min(1,left/total));
+    if(ok){const total=(S.ansMs||TURN_MS)+((S.ext[p.id])||0);const left=Math.max(0,myDeadline(p.id)-a.at);pts=100+Math.round(40*Math.min(1,left/total));
       if(S.rm[p.id])pts=Math.round(pts/2);if(a.at<bestAt){bestAt=a.at;best=p.id}}
     if(S.dbl[p.id])pts*=2;
+    pts=Math.round(pts*(S.mult||1));
     p.score+=pts;rows.push({id:p.id,idx:a?a.idx:-1,ok,pts,dbl:!!S.dbl[p.id],half:!!S.rm[p.id]});
   });
   const friends=[];
@@ -769,8 +827,14 @@ function endRound(){
   broadcast();
 }
 function nextTurn(){if(S.phase==='switch')return;S.phase='switch';S.turn++;if(S.turn>=S.total)endGame();else startTurn()}
-function endGame(){S.phase='end';S.endK=rid(6);broadcast()}
-function backToLobby(){S.phase='lobby';S.cat=null;S.players.forEach(p=>{p.score=0});S.players=S.players.filter(p=>p.on);broadcast()}
+function endGame(){
+  if(!S.series)S.series={games:[],names:{}};
+  const sc={};S.players.forEach(p=>{sc[p.id]=p.score;S.series.names[p.id]=p.name});
+  S.series.games.push({cat:S.cat,diff:S.curDiff,sc});
+  S.endK=rid(6);S.phase=S.series.games.length>=(S.seriesLen||1)?'end':'between';broadcast();
+}
+function nextGame(){if(!isHost||S.phase!=='between')return;S.phase='lobby';S.cat=null;broadcast()}
+function backToLobby(){S.phase='lobby';S.cat=null;S.series={games:[],names:{}};S.players.forEach(p=>{p.score=0});S.players=S.players.filter(p=>p.on);broadcast()}
 
 /* ========== תצוגה ========== */
 function avH(p,cls){if(!p)return '';const ph=p.id===me.id?me.photo:PHOTOS[p.id];return ph?`<img class="pav ${cls||''}" src="${ph}" alt="">`:`<span class="av">${p.av||'🎵'}</span>`}
@@ -778,7 +842,7 @@ function chip(p,extra,st){return `<div class="pchip ${p.on?'':'off'} ${extra||''
 function render(){
   if(!S){$('#goWrap').classList.remove('on');showScreen(me.name?'home':'name');return}
   if(S.phase==='switch')return;
-  ({lobby:renderLobby,loading:renderLoading,turn:renderGame,reveal:renderGame,end:renderEnd}[S.phase]||renderLobby)();
+  ({lobby:renderLobby,loading:renderLoading,turn:renderGame,reveal:renderGame,end:renderEnd,between:renderBetween}[S.phase]||renderLobby)();
 }
 function catBtn(c){return `<button class="cat ${S.cat===c.id?'sel':''} ${isHost?'':'dis'}" data-cat="${c.id}" style="background:${c.color};color:${['#FFC83D','#2EE6B5','#5EC8FF'].includes(c.color)?'#1d1640':'#fff'}">${c.icon?`<span class="ci">${c.icon}</span>`:''}${c.label}<small>${esc(c.sub||c.group)}</small></button>`}
 function inviteText(){const link=location.href.split('#')[0]+'#'+S.code;return 'בוא/י לשחק איתי "נחש את הלהיט"! 🎵\nקוד חדר: '+S.code+'\n'+link}
@@ -791,6 +855,14 @@ function renderLobby(){
   $('#lobbyPlayers').innerHTML=list.map(p=>`<div class="rm ${p.on?'':'off'}"><span class="dot"></span>${avH(p,'mid')}<span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}</span>${p.id===S.host?'<span class="host">👑 מארח</span>':''}<span class="tag2">${p.on?'מחובר':'התנתק'}</span></div>`).join('');
   $('#pCount').textContent='('+S.players.filter(p=>p.on).length+')';
   $('#catsTheme').innerHTML=THEMES.map(catBtn).join('');$('#catsMix').innerHTML=MIXES.map(catBtn).join('');$('#catsIntl').innerHTML=INTL.map(catBtn).join('');$('#catsIl').innerHTML=ISR.map(catBtn).join('');
+  const played=(S.series&&S.series.games.length)||0;const lockSet=!isHost||played>0;
+  $('#diffSeg').className='dgrid'+(lockSet?' ro':'');
+  $('#diffSeg').innerHTML=Object.keys(DIFFS).map(k=>{const d=DIFFS[k];return `<button class="dbtn ${S.diff===k?'on':''}" data-diff="${k}"><b>${d.icon} ${d.label}</b>${d.desc}</button>`}).join('')+`<button class="dbtn wide ${S.diff==='stairs'?'on':''}" data-diff="stairs"><b>📈 מדרגות</b>כל משחק בסדרה קשה יותר: קל ← בינוני ← קשה ← אלוף</button>`;
+  $('#seriesSeg').className='seg'+(lockSet?' ro':'');$('#seriesSeg').innerHTML=[1,3,5].map(n=>`<button class="${S.seriesLen===n?'on':''}" data-sl="${n}">${n}</button>`).join('');
+  $('#perSeg').className='seg'+(lockSet?' ro':'');$('#perSeg').innerHTML=[10,15,20].map(n=>`<button class="${S.perGame===n?'on':''}" data-pg="${n}">${n}</button>`).join('');
+  const nd=DIFFS[gameDiff()];
+  $('#seriesInfo').innerHTML=played?`🏁 משחק <b>${played+1}</b> מתוך ${S.seriesLen} · רמה: ${nd.icon} ${nd.label}`:'';
+  $('#goSub').textContent=`${S.perGame} שירים · ${nd.icon} ${nd.label}`+(S.seriesLen>1?` · משחק ${played+1}/${S.seriesLen}`:'');
   const sc=S.cat&&CATS[S.cat];const hostP=pById(S.host)||{name:'המארח'};
   $('#waitHost').innerHTML=isHost?(sc?'':'👆 בחר/י קטגוריה כדי להתחיל'):(sc?`<div class="wait-cat">${esc(sc.group)} · ${esc(sc.label)}</div>מחכים ש${esc(hostP.name)} יתחיל...`:`רק ${esc(hostP.name)} בוחר/ת קטגוריה. מחכים...`);
   const show=isHost&&!!sc;const gw=$('#goWrap');
@@ -801,13 +873,13 @@ function renderLoading(){showScreen('loading');$('#loadBar').style.width=Math.ro
 function renderGame(){
   showScreen('game');
   const cat=CATS[S.cat];const turn=S.phase==='turn';const done=turn&&S.done&&S.done[me.id];
-  $('#turnInfo').textContent='שיר '+(S.turn+1)+' מתוך '+S.total;$('#catInfo').textContent=cat.group+' · '+cat.label;
+  const D=DIFFS[S.curDiff]||DIFFS.med;const gs=S.series&&S.seriesLen>1?'משחק '+(S.series.games.length+1)+'/'+S.seriesLen+' · ':'';$('#turnInfo').textContent=gs+'שיר '+(S.turn+1)+'/'+S.total;$('#catInfo').textContent=D.icon+' '+cat.label;
   $('#scores').innerHTML=S.players.slice().sort((a,b)=>b.score-a.score).map(p=>{let st='';if(turn&&p.on){const d=S.done[p.id];st=d==='t'?'⏰':d?'✔':'🤔'}return chip(p,p.id===me.id?'cur':'',st)}).join('');
   const tk=S.gid+':'+S.turn;
   if(L.turnK!==tk){L.turnK=tk;L.mcK=null;L.myPick=null;sfx.ll()}
-  if(S.play&&L.playK!==S.play.k){L.playK=S.play.k;playUrl(S.play.url)}
+  if(S.play&&L.playK!==S.play.k){L.playK=S.play.k;playSeg(S.play.url,S.play.start,S.play.len)}
   const myExtra=S.extra&&S.extra[me.id];
-  if(myExtra&&L.extraK!==myExtra.k){L.extraK=myExtra.k;playUrl(myExtra.url);toast('🎵 מתנגן עכשיו שיר אחר של אותו אמן')}
+  if(myExtra&&L.extraK!==myExtra.k){L.extraK=myExtra.k;playSeg(myExtra.url,0,Math.max(S.listen||15000,10000));toast('🎵 מתנגן עכשיו שיר אחר של אותו אמן')}
   $('#turnPane').classList.toggle('hidden',!turn);$('#revealPane').classList.toggle('hidden',turn);
   if(!turn){renderReveal();return}
   const waiting=activePlayers().filter(p=>!S.done[p.id]).length;
@@ -841,6 +913,7 @@ function renderReveal(){
     $('#speech').textContent=txt;$('#speech').style.animation='none';void $('#speech').offsetWidth;$('#speech').style.animation='';
     if(mine&&mine.ok){sfx.win();confetti(mine.id===r.best?240:140);window.bg3d&&bg3d.celebrate()}else sfx.lose();
     setTimeout(()=>say(txt,$('#singerWrap .singer')),350);
+    if(S.play)setTimeout(()=>playSeg(S.play.url,0,0),200);
   }
   $('#rvSong').textContent=r.title;$('#rvArt').textContent=r.artist;
   const pickTxt=i=>i>=0&&S.mc&&S.mc[i]?S.mc[i].t+' – '+S.mc[i].a:'';
@@ -852,15 +925,38 @@ function renderReveal(){
   $('#nextBtn').textContent=S.turn+1>=S.total?'לתוצאות!':'לשיר הבא';
   $('#nextHint').textContent=isHost?'':'השיר הבא יתחיל עוד רגע...';
 }
+function pName(id){const p=pById(id);return p?p.name:((S.series&&S.series.names[id])||'?')}
+function seriesRank(){const ids=new Set();(S.series.games||[]).forEach(g=>Object.keys(g.sc).forEach(i=>ids.add(i)));return [...ids].map(id=>({id,total:seriesTotal(id),gs:S.series.games.map(g=>g.sc[id]||0)})).sort((a,b)=>b.total-a.total)}
+function standingsHTML(rank){return rank.map((r,i)=>{const p=pById(r.id)||{id:r.id,name:pName(r.id),av:'🎵'};return `<div class="st-row ${i===0?'first':''}"><span class="md">${MEDALS[i]||'🏅'}</span>${avH(p)}<span class="nm">${esc(p.name)}</span><span class="gs">${r.gs.length>1?r.gs.join(' + '):''}</span><span class="tt">${r.total.toLocaleString()}</span></div>`}).join('')}
+function renderBetween(){
+  showScreen('between');closeModals();
+  const n=S.series.games.length,g=S.series.games[n-1];const nd=DIFFS[gameDiff()];
+  $('#btTitle').textContent=`סוף משחק ${n} מתוך ${S.seriesLen}`;
+  $('#btSub').textContent=`הבא: ${nd.icon} ${nd.label}`;
+  const wid=Object.keys(g.sc).sort((a,b)=>g.sc[b]-g.sc[a])[0];
+  if(L.endK!==S.endK){L.endK=S.endK;stopAudio();
+    $('#btSinger').innerHTML=singerSVG('happy');const txt=`כל הכבוד, ${pName(wid)}! ניצחת במשחק ${n}`;
+    $('#btSpeech').textContent=txt;sfx.win();confetti(180);window.bg3d&&bg3d.celebrate();setTimeout(()=>say(txt,$('#btSinger .singer')),400)}
+  $('#btTable').innerHTML='<h3 style="margin-bottom:6px">טבלת הסדרה</h3>'+standingsHTML(seriesRank());
+  $('#btNext').classList.toggle('hidden',!isHost);
+  $('#btWait').textContent=isHost?'':`מחכים ש${pName(S.host)} יבחר קטגוריה למשחק הבא...`;
+}
 function renderEnd(){
   showScreen('end');closeModals();
-  const rank=S.players.slice().sort((a,b)=>b.score-a.score);const w=rank[0];
+  const multi=(S.seriesLen||1)>1;const rank=seriesRank();
+  const P=r=>pById(r.id)||{id:r.id,name:pName(r.id),av:'🎵'};
+  const w=rank[0]&&P(rank[0]);
+  $('#endTitle').textContent=multi?'🏆 סוף הסדרה!':'סוף המשחק!';
   if(L.endK!==S.endK){L.endK=S.endK;stopAudio();
-    $('#endSinger').innerHTML=singerSVG('happy');const txt=w?`כל הכבוד, ${w.name}! אלוף הלהיטים!`:'כל הכבוד!';
-    $('#endSpeech').textContent=txt;sfx.win();confetti(260);window.bg3d&&bg3d.celebrate();setTimeout(()=>confetti(160),1200);setTimeout(()=>say(txt,$('#endSinger .singer')),400)}
-  const pod=[rank[1],rank[0],rank[2]],hts=[90,130,65],cols=['#C9C9D9','#FFC83D','#E09B5A'],place=[2,1,3];
-  $('#podium').innerHTML=pod.map((p,i)=>p?`<div class="pod"><div class="av">${avH(p,'big')}</div><div class="nm">${esc(p.name)}</div><div class="blk" style="height:${hts[i]}px;background:${cols[i]};color:#26215C">${place[i]}<div style="font-family:Rubik;font-size:13px">${p.score}</div></div></div>`:'<div class="pod"></div>').join('');
-  $('#endList').innerHTML=rank.map((p,i)=>`<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span>${i+1}. ${avH(p)} ${esc(p.name)}</span><b>${p.score}</b></div>`).join('');
+    $('#endSinger').innerHTML=singerSVG('happy');const txt=w?`כל הכבוד, ${w.name}! ${multi?'אלוף הסדרה':'אלוף הלהיטים'}!`:'כל הכבוד!';
+    $('#endSpeech').textContent=txt;sfx.win();confetti(280);window.bg3d&&bg3d.celebrate();
+    [900,1800,2700,3600].forEach(t=>setTimeout(()=>{confetti(140);window.bg3d&&bg3d.celebrate()},t));
+    setTimeout(()=>say(txt,$('#endSinger .singer')),400)}
+  const pod=[rank[1],rank[0],rank[2]],hts=[90,130,65],cols=['#C9C9D9','#FFC83D','#E09B5A'],place=[2,1,3],tro=['🥈','🏆','🥉'];
+  $('#podium').innerHTML=pod.map((r,i)=>r?`<div class="pod"><span class="trophy">${tro[i]}</span><div class="av">${avH(P(r),'big')}</div><div class="nm">${esc(P(r).name)}</div><div class="blk" style="height:${hts[i]}px;background:${cols[i]};color:#26215C">${place[i]}<div style="font-family:Rubik;font-size:13px">${r.total.toLocaleString()}</div></div></div>`:'<div class="pod"></div>').join('');
+  const gl=S.series.games.map((g,i)=>`${i+1}. ${DIFFS[g.diff]?DIFFS[g.diff].icon:''} ${CATS[g.cat]?CATS[g.cat].label:''}`).join(' · ');
+  $('#endList').innerHTML=`<h3 style="margin-bottom:4px">${multi?'סיכום הסדרה':'תוצאות'}</h3>${multi?`<div class="mut" style="font-size:12px;margin-bottom:6px">${esc(gl)}</div>`:''}`+standingsHTML(rank);
+  $('#againBtn').textContent=multi?'סדרה חדשה':'עוד משחק';
   $('#againBtn').classList.toggle('hidden',!isHost);
 }
 function closeModals(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on'));if(!S||S.phase!=='lobby')$('#goWrap').classList.remove('on')}
@@ -873,7 +969,7 @@ function flyReaction(d){const e=document.createElement('div');e.className='fly';
 
 /* טיימר */
 (function loop(){
-  if(S&&S.phase==='turn'&&S.deadline){const dl=myDeadline(me.id);const left=Math.max(0,dl-nowHost());const total=TURN_MS+((S.ext&&S.ext[me.id])||0);$('#tbar').style.width=Math.min(100,left/total*100)+'%';$('#tsec').textContent=(S.done&&S.done[me.id])?'ענית ✔':Math.ceil(left/1000)+' שניות';$('#tbar').style.opacity=left<10000&&Math.floor(left/400)%2?0.4:1}
+  if(S&&S.phase==='turn'&&S.deadline){const dl=myDeadline(me.id);const left=Math.max(0,dl-nowHost());const total=(S.ansMs||TURN_MS)+((S.ext&&S.ext[me.id])||0);$('#tbar').style.width=Math.min(100,left/total*100)+'%';$('#tsec').textContent=(S.done&&S.done[me.id])?'ענית ✔':Math.ceil(left/1000)+' שניות';$('#tbar').style.opacity=left<10000&&Math.floor(left/400)%2?0.4:1}
   requestAnimationFrame(loop)})();
 
 /* ========== אירועים ========== */
@@ -896,6 +992,10 @@ $('#photoInp').addEventListener('change',e=>{const f=e.target.files&&e.target.fi
   img.onerror=()=>{URL.revokeObjectURL(url);toast('לא הצלחנו לקרוא את התמונה. נסו תמונה אחרת.')};img.src=url;e.target.value=''});
 document.addEventListener('click',e=>{
   const c=e.target.closest('.cat');if(c&&isHost&&S&&S.phase==='lobby'){S.cat=c.dataset.cat;sfx.click();broadcast()}
+  if(isHost&&S&&S.phase==='lobby'&&!(S.series&&S.series.games.length)){
+    const dd=e.target.closest('[data-diff]');if(dd){S.diff=dd.dataset.diff;sfx.click();broadcast()}
+    const sl=e.target.closest('[data-sl]');if(sl){S.seriesLen=+sl.dataset.sl;sfx.click();broadcast()}
+    const pg=e.target.closest('[data-pg]');if(pg){S.perGame=+pg.dataset.pg;sfx.click();broadcast()}}
   const mcb=e.target.closest('#mcBox button');if(mcb&&S&&S.mc&&S.phase==='turn'&&!(S.done&&S.done[me.id])&&L.myPick==null){L.myPick=+mcb.dataset.i;mcb.classList.add('picked');$('#changeAns').classList.remove('hidden');$('#mcBox').classList.add('locked');sfx.click();send({type:'answer',idx:+mcb.dataset.i})}
   const hbt=e.target.closest('#helpOpts button');if(hbt&&S&&helpFor){send({type:'helpReply',forId:helpFor,idx:+hbt.dataset.i});$('#helpModal').classList.remove('on');toast('העזרה נשלחה!')}
   const rb=e.target.closest('#reactBar button');if(rb){const d={e:rb.dataset.e,n:me.name};pub('/fx',d);if(!client)flyReaction(d)}
@@ -903,13 +1003,14 @@ document.addEventListener('click',e=>{
 });
 $('#leaveLobby').onclick=leave;$('#leaveGame').onclick=leave;$('#exitBtn').onclick=leave;
 $('#againBtn').onclick=()=>{if(isHost)backToLobby()};
+$('#btNext').onclick=()=>{sfx.click();nextGame()};$('#btExit').onclick=leave;
 document.querySelectorAll('.ll').forEach(b=>b.onclick=()=>{
   const k=b.dataset.ll;if(b.classList.contains('used'))return;
   if(k==='friend'){const fs=S.players.filter(p=>p.on&&p.id!==me.id);$('#friendList').innerHTML=fs.map(p=>`<div class="pchip" data-id="${p.id}" style="border-color:${p.col};cursor:pointer">${avH(p,'mid')}${esc(p.name)}</div>`).join('');$('#friendPick').classList.add('on');return}
   sfx.ll();send({type:'ll',kind:k});
 });
 $('#friendCancel').onclick=()=>$('#friendPick').classList.remove('on');
-$('#replayBtn').onclick=()=>{if(S&&S.play)playUrl(S.play.url)};
+$('#replayBtn').onclick=()=>{if(S&&S.play)playSeg(S.play.url,S.play.start,S.play.len)};
 $('#tapAudio').onclick=()=>{aud.play().catch(()=>{})};
 $('#changeAns').onclick=()=>{if(!S||S.phase!=='turn')return;L.myPick=null;L.mcK=null;sfx.click();$('#mcBox').classList.remove('locked');$('#changeAns').classList.add('hidden');$('#mcBox').querySelectorAll('.picked').forEach(b=>b.classList.remove('picked'));send({type:'unanswer'})};
 $('#nextBtn').onclick=()=>{sfx.click();send({type:'next'})};
