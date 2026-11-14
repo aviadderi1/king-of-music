@@ -233,6 +233,8 @@ body.has3d{background:#0b0520}
 .dbtn b{display:block;font-size:15px;color:#fff;font-family:'Secular One';font-weight:400}
 .dbtn.on{border-color:var(--gold);background:rgba(255,200,61,.14)}
 .dbtn.wide{grid-column:1 / -1}
+.dgrid.three{grid-template-columns:repeat(3,1fr)}
+.dgrid.three .dbtn{text-align:center}
 .seg{display:flex;gap:6px;justify-content:center}
 .seg button{min-width:44px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid var(--line);font-size:15px}
 .seg button.on{background:var(--gold);color:#3b2400;font-weight:700;border-color:var(--gold)}
@@ -319,6 +321,8 @@ body.has3d{background:#0b0520}
       <div class="center"><div class="cats-h">🏁 משחקים בסדרה</div><div class="seg" id="seriesSeg"></div></div>
       <div class="center"><div class="cats-h">🎵 שירים בכל משחק</div><div class="seg" id="perSeg"></div></div>
     </div>
+    <div class="cats-h center" style="margin-top:12px">🎼 סוג שירים</div>
+    <div class="dgrid three" id="depthSeg"></div>
   </div>
   <div class="card">
     <h3>בחרו קטגוריה</h3>
@@ -491,6 +495,38 @@ const MIXES=[
 (function(){const seen=new Set();MIXES[0].list=[];INTL.forEach(c=>c.list.forEach(e=>{const k=(e[0]+'|'+e[1]).toLowerCase();if(!seen.has(k)){seen.add(k);MIXES[0].list.push(e)}}));
  const sa=new Set();MIXES[1].artists=[];ISR.forEach(c=>c.artists.forEach(a=>{if(!sa.has(a[0])){sa.add(a[0]);MIXES[1].artists.push(a)}}))})();
 THEMES.concat(MIXES).forEach(c=>CATS[c.id]=c);
+
+/* ===== מאגר מורחב ===== */
+const MORE={
+ i60:[['The Supremes','הסופרימס'],['The Kinks','הקינקס'],['The Who','דה הו'],['Otis Redding','אוטיס רדינג'],['Ray Charles',"ריי צ'ארלס"],['The Byrds','הבירדס'],['Jimi Hendrix',"ג'ימי הנדריקס"],['Janis Joplin',"ג'ניס ג'ופלין"],['Creedence Clearwater Revival','קרידנס'],['The Hollies','ההוליז'],['Dusty Springfield','דאסטי ספרינגפילד'],['Bob Dylan','בוב דילן'],['The Zombies','הזומביז'],['Sam Cooke','סם קוק'],['Frank Sinatra','פרנק סינטרה'],['Nancy Sinatra','ננסי סינטרה']],
+ i70:[['Elton John',"אלטון ג'ון"],['David Bowie','דיוויד בואי'],['Earth, Wind & Fire',"ארת' ווינד אנד פייר"],['Donna Summer','דונה סאמר'],['Rod Stewart','רוד סטיוארט'],['The Jackson 5',"הג'קסון 5"],['Billy Joel',"בילי ג'ואל"],['Supertramp','סופרטרמפ'],['Electric Light Orchestra','אי אל או'],['Bob Marley & The Wailers','בוב מארלי'],['Carpenters','הקרפנטרס'],['Barry White','בארי וייט'],['KISS','קיס'],['Dire Straits','דייר סטרייטס'],['Bee Gees',"הבי ג'יז"],['ABBA','אבבא']],
+ i80:[['Duran Duran','דוראן דוראן'],['Tears for Fears','טירז פור פירז'],['Depeche Mode','דפש מוד'],['Eurythmics','יוריתמיקס'],['Culture Club','קאלצ׳ר קלאב'],['Phil Collins','פיל קולינס'],['Lionel Richie','ליונל ריצ׳י'],['Def Leppard','דף לפרד'],['Bryan Adams','בריאן אדמס'],['Roxette','רוקסט'],['Simple Minds','סימפל מיינדס'],['Pet Shop Boys','פט שופ בויז'],['INXS','אינאקסס'],['Kim Wilde','קים ויילד'],['Spandau Ballet','ספנדאו באלט'],['Madonna','מדונה'],['Michael Jackson',"מייקל ג'קסון"]],
+ i90:[['Pearl Jam',"פרל ג'אם"],['Red Hot Chili Peppers','רד הוט צ׳ילי פפרס'],['Blur','בלר'],['Green Day','גרין דיי'],['No Doubt','נו דאוט'],['Alanis Morissette','אלאניס מוריסט'],['Mariah Carey','מריה קרי'],['Boyz II Men','בויז טו מן'],['Bon Jovi',"בון ג'ובי"],['Ace of Base','אייס אוף בייס'],['Savage Garden','סאבג׳ גארדן'],['Robbie Williams','רובי וויליאמס'],['Shania Twain','שניה טוויין'],["Destiny's Child",'דסטיניז צ׳יילד'],['The Offspring','האוףספרינג'],['Oasis','אואזיס']],
+ i00:[['Linkin Park','לינקין פארק'],['Nelly Furtado','נלי פורטדו'],['Justin Timberlake',"ג'סטין טימברלייק"],['Christina Aguilera','כריסטינה אגילרה'],['Maroon 5','מארון 5'],['Gwen Stefani','גוון סטפני'],['P!nk','פינק'],['Green Day','גרין דיי'],['Alicia Keys','אלישה קיז'],['Muse','מיוז'],['Arctic Monkeys','ארקטיק מונקיז'],['Sean Paul','שון פול'],['Nelly','נלי'],['Evanescence','אוונסנס'],['Coldplay','קולדפליי'],['Rihanna','ריהאנה']],
+ i10:[['Bruno Mars','ברונו מארס'],['Katy Perry','קייטי פרי'],['Dua Lipa','דואה ליפה'],['Imagine Dragons','אימג׳ין דרגונס'],['Sia','סיה'],['Rihanna','ריהאנה'],['Ariana Grande','אריאנה גרנדה'],['Harry Styles','הארי סטיילס'],['Coldplay','קולדפליי'],['Calvin Harris','קלווין האריס'],['Twenty One Pilots','טוונטי וואן פיילוטס'],['OneRepublic','וואן ריפבליק'],['Shawn Mendes','שון מנדס'],['Post Malone','פוסט מלון'],['Lady Gaga','ליידי גאגא'],['Lewis Capaldi','לואיס קפלדי'],['Ed Sheeran','אד שירן']],
+ t_rock:[['Led Zeppelin','לד זפלין'],['Pink Floyd','פינק פלויד'],['The Who','דה הו'],['Deep Purple','דיפ פרפל'],['Black Sabbath','בלאק סבאת'],['AC/DC','איי סי די סי'],['Queen','קווין'],['The Doors','הדורס'],['Aerosmith',"אירוסמית'"],['Lynyrd Skynyrd','לינרד סקינרד'],['Eagles','האיגלס'],['Rush','ראש'],['Van Halen','ואן היילן'],['ZZ Top','זי זי טופ'],['The Rolling Stones','הרולינג סטונס'],['Guns N\' Roses','גאנז אנד רוזס']],
+ t_love:[['Whitney Houston','ויטני יוסטון'],['Celine Dion','סלין דיון'],['Mariah Carey','מריה קרי'],['Adele','אדל'],['Lionel Richie','ליונל ריצ׳י'],['Ed Sheeran','אד שירן'],['Sam Smith','סם סמית'],['Michael Bolton','מייקל בולטון'],['Toni Braxton','טוני ברקסטון'],['Bryan Adams','בריאן אדמס'],['Luther Vandross','לותר ונדרוס'],['Air Supply','אייר סאפליי'],['Chicago','שיקגו'],['John Legend',"ג'ון לג'נד"],['Lewis Capaldi','לואיס קפלדי']],
+ t_hiphop:[['Eminem','אמינם'],['2Pac','טופאק'],['The Notorious B.I.G.','נוטוריוס ביג'],['Dr. Dre','דר דרה'],['Snoop Dogg','סנופ דוג'],['Kanye West','קניה ווסט'],['JAY-Z',"ג'יי זי"],['Kendrick Lamar','קנדריק לאמאר'],['Drake','דרייק'],['50 Cent','פיפטי סנט'],['Nas','נאס'],['Outkast','אאוטקאסט'],['Run-DMC','ראן די אם סי'],['Beastie Boys','ביסטי בויז'],['Missy Elliott','מיסי אליוט'],['Lil Wayne','ליל וויין'],['Ludacris','לודקריס']],
+ t_party:[['Avicii',"אביצ'י"],['David Guetta','דיוויד גואטה'],['Calvin Harris','קלווין האריס'],['Daft Punk','דאפט פאנק'],['Martin Garrix','מרטין גאריקס'],['Swedish House Mafia','סוודיש האוס מאפיה'],['Tiësto','טייסטו'],['Kygo','קייגו'],['Major Lazer','מייג׳ור לייזר'],['The Chainsmokers','הצ׳יינסמוקרס'],['Basshunter','באסהאנטר'],['Scooter','סקוטר'],['2 Unlimited','טו אנלימיטד'],['Haddaway','האדאווי'],['Eiffel 65','אייפל 65'],['Pitbull','פיטבול']]
+};
+Object.keys(MORE).forEach(k=>{if(CATS[k])CATS[k].more=MORE[k]});
+const EXTRA={
+ t_movie:[['Stand by Me','Ben E. King','בן אי קינג'],['Twist and Shout','The Beatles','הביטלס'],['Bohemian Rhapsody','Queen','קווין'],['Iris','Goo Goo Dolls','גו גו דולס'],['Hero','Chad Kroeger','צ׳אד קרוגר'],["I Don't Want to Miss a Thing",'Aerosmith',"אירוסמית'"],['Men in Black','Will Smith','וויל סמית'],['Gonna Fly Now','Bill Conti','ביל קונטי'],["Can't Stop the Feeling!",'Justin Timberlake',"ג'סטין טימברלייק"],['See You Again','Wiz Khalifa','וויז חליפה'],['Theme from Shaft','Isaac Hayes','אייזק הייז'],['Mamma Mia','ABBA','אבבא'],['City of Stars','Ryan Gosling','ריאן גוסלינג'],['Glory','John Legend',"ג'ון לג'נד"]],
+ t_euro:[['Ding-A-Dong','Teach-In','טיץ׳ אין'],['Save Your Kisses for Me','Brotherhood of Man','ברדרהוד אוף מן'],['Rock Me','Riva','ריבה'],['Insieme: 1992','Toto Cutugno','טוטו קוטוניו'],['Fly on the Wings of Love','Olsen Brothers','האחים אולסן'],['Everyway That I Can','Sertab Erener','סרטאב ארנר'],['Running Scared','Ell & Nikki','אל וניקי'],['Soldi','Mahmood','מחמוד'],['Stefania','Kalush Orchestra','קלוש'],['Shum','Go_A','גו אי'],['Hurricane','Eden Golan','עדן גולן'],['Unicorn','Noa Kirel','נועה קירל'],['Set Me Free','Eden Alene','עדן אלנה'],['Dschinghis Khan','Dschinghis Khan','צ׳ינגיס חאן']],
+ t_disney:[['Remember Me','Miguel','מיגל'],['Speechless','Naomi Scott','נעמי סקוט'],['When Will My Life Begin','Mandy Moore','מנדי מור'],['I See the Light','Mandy Moore','מנדי מור'],['Strangers Like Me','Phil Collins','פיל קולינס'],["You'll Be in My Heart",'Phil Collins','פיל קולינס'],["I'll Make a Man Out of You",'Donny Osmond','דוני אוסמונד'],['Almost There','Anika Noni Rose','אניקה נוני רוז'],['Poor Unfortunate Souls','Pat Carroll','פט קרול'],['Gaston','Jesse Corti','ג׳סי קורטי'],['Prince Ali','Robin Williams','רובין וויליאמס'],['Belle',"Paige O'Hara",'פייג׳ או׳הרה'],['Love Is an Open Door','Kristen Bell','קריסטן בל'],['For the First Time in Forever','Kristen Bell','קריסטן בל']]
+};
+Object.keys(EXTRA).forEach(k=>{const c=CATS[k];if(!c)return;EXTRA[k].forEach(e=>{if(!c.list.some(x=>x[0].toLowerCase()===e[0].toLowerCase()))c.list.push(e)})});
+const IL_MORE={
+ il70:[['אושיק לוי','Ushik Levi'],['יגאל בשן','Yigal Bashan'],['שולה חן','Shula Chen'],['ריקי גל','Riki Gal'],['יוסי בנאי','Yossi Banai'],['שושנה דמארי','Shoshana Damari'],['ירדנה ארזי','Yardena Arazi'],['הגשש החיוור','HaGashash HaHiver'],['להקת הנח"ל','Lehakat HaNahal'],['ששי קשת','Sassi Keshet'],['אילן וחפציבה','Ilan & Haftzi-Ba'],['הכל עובר חביבי','HaKol Over Habibi'],['אסתר עופרים','Esther Ofarim']],
+ il80:[['שלמה ארצי','Shlomo Artzi'],['ריקי גל','Riki Gal'],['יזהר אשדות','Izhar Ashdot'],['הכל עובר חביבי','HaKol Over Habibi'],['שלום חנוך','Shalom Hanoch'],['מזי כהן','Mazi Cohen'],['ירדנה ארזי','Yardena Arazi'],['אריק איינשטיין','Arik Einstein'],['שלמה גרוניך','Shlomo Gronich'],['נורית גלרון','Nurit Galron'],['אבי טולדנו','Avi Toledano'],['ששי קשת','Sassi Keshet']],
+ il90:[['שלומי שבת','Shlomi Shabat'],['רמי פורטיס','Rami Fortis'],['ברי סחרוף','Berry Sakharof'],['אחינועם ניני','Noa'],['יהודה פוליקר','Yehuda Poliker'],['משינה','Mashina'],['טיפקס','Teapacks'],['ריטה','Rita'],['שלמה ארצי','Shlomo Artzi'],['יהודית רביץ','Yehudit Ravitz'],['דויד ברוזה','David Broza'],['אריאל זילבר','Ariel Zilber']],
+ il00:[['אייל גולן','Eyal Golan'],['שרית חדד','Sarit Hadad'],['רן דנקר','Ran Danker'],['עברי לידר','Ivri Lider'],['קובי אוז','Kobi Oz'],['ריטה','Rita'],['מאיר בנאי','Meir Banai'],['אביב גפן','Aviv Geffen'],['שלומי סרנגה','Shlomi Saranga'],['מוקי','Muki'],['הראל מויאל','Harel Moyal'],['ליאור נרקיס','Lior Narkis'],['שלמה ארצי','Shlomo Artzi']],
+ il10:[['אביתר בנאי','Evyatar Banai'],['פאר טסי','Peer Tasi'],['אייל גולן','Eyal Golan'],['איתי לוי','Itay Levi'],['הדג נחש','Hadag Nahash'],['שלמה ארצי','Shlomo Artzi'],['טונה','Tuna'],['אגם בוחבוט','Agam Buhbut'],['שחר סאול','Shahar Saul'],['נונו','Nunu'],['ליאור נרקיס','Lior Narkis'],['הפרויקט של עידן רייכל','The Idan Raichel Project']]
+};
+Object.keys(IL_MORE).forEach(k=>{const c=CATS[k];if(!c)return;IL_MORE[k].forEach(a=>{if(!c.artists.some(x=>x[0]===a[0]))c.artists.push(a)})});
+(function(){const sa=new Set();MIXES[1].artists=[];ISR.forEach(c=>c.artists.forEach(a=>{if(!sa.has(a[0])){sa.add(a[0]);MIXES[1].artists.push(a)}}));
+ const seen=new Set(MIXES[0].list.map(e=>(e[0]+'|'+e[1]).toLowerCase()));const ma=[];INTL.forEach(c=>(c.more||[]).forEach(a=>{if(!ma.some(x=>x[0]===a[0]))ma.push(a)}));MIXES[0].more=ma})();
+const DEPTHS={hits:{icon:'🔥',label:'להיטים',desc:'רק המוכרים',max:6,skip:0},mix:{icon:'🎵',label:'מעורב',desc:'חצי להיטים, חצי עוד שירים',max:15,skip:0},deep:{icon:'💎',label:'מעמיק',desc:'בעיקר שירים פחות מוכרים',max:20,skip:3}};
 const ALLCAT={id:'all',icon:'🎰',label:'הכול מעורבב',sub:'לועזי וישראלי · כל התקופות · כל הסגנונות',color:'linear-gradient(100deg,#FF4F9A,#8B7BFF,#2EE6B5,#FFC83D)',type:'all',country:'US',group:'מיקס',wide:true};
 (function(){const seen=new Set();ALLCAT.list=[];INTL.concat(THEMES.filter(t=>t.type==='song')).forEach(c=>c.list.forEach(e=>{const k=(e[0]+'|'+e[1]).toLowerCase();if(!seen.has(k)){seen.add(k);ALLCAT.list.push(e)}}));
  const sa=new Set();ALLCAT.artists=[];ISR.concat(THEMES.filter(t=>t.type==='artist')).forEach(c=>c.artists.forEach(a=>{if(!sa.has(a[0])){sa.add(a[0]);ALLCAT.artists.push(a)}}))})();
@@ -575,17 +611,18 @@ async function findSong(cat,e){
   if(!r)return null;
   return {url:r.previewUrl,title:t,artist:a,artistId:r.artistId,trackId:r.trackId,truthT:[t,cleanTitle(r.trackName)],truthA:[a,r.artistName,ha],opt:{t:cleanTitle(t),a:a}};
 }
-async function artistTracks(cat,pair){
+async function artistTracks(cat,pair,o){
+  o=o||{};const max=o.max||10,skip=o.skip||0;const country=(cat&&cat.country)||'IL';
   const [he,en]=pair;
   async function q(term){
-    const d=await itunes('search',{term,country:'IL',media:'music',entity:'song',attribute:'artistTerm',limit:30});
-    const rs=(d.results||[]).filter(x=>x.previewUrl);
+    const d=await itunes('search',{term,country,media:'music',entity:'song',attribute:'artistTerm',limit:Math.min(200,Math.max(30,(max+skip)*2))});
+    const rs=(d.results||[]).filter(x=>x.previewUrl&&!/karaoke|tribute|instrumental|remix|\(live|- live|live at|live from|live in /i.test(x.trackName+' '+(x.collectionName||'')));
     if(!rs.length)return [];
     let good=rs.filter(x=>matchAny(x.artistName,[he,en],true));
     if(!good.length){const cnt={};rs.forEach(x=>cnt[x.artistId]=(cnt[x.artistId]||0)+1);const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];good=rs.filter(x=>String(x.artistId)===top)}
     const seen=new Set();const out=[];
-    for(const x of good){const k=norm(cleanTitle(x.trackName));if(!k||seen.has(k))continue;seen.add(k);out.push(x);if(out.length>=10)break}
-    return out;
+    for(const x of good){const k=norm(cleanTitle(x.trackName));if(!k||seen.has(k))continue;seen.add(k);out.push(x);if(out.length>=skip+max)break}
+    return out.length>skip+2?out.slice(skip):out;
   }
   let rs=await q(he);if(rs.length<3&&en){try{const r2=await q(en);if(r2.length>rs.length)rs=r2}catch(e){}}
   return rs.map(r=>({url:r.previewUrl,title:cleanTitle(r.trackName),artist:he,artistId:r.artistId,trackId:r.trackId,truthT:[cleanTitle(r.trackName),r.trackName],truthA:[he,en,r.artistName],opt:{t:cleanTitle(r.trackName),a:he}}));
@@ -600,29 +637,42 @@ async function fetchSongs(cat,list,first,onProg){
   }
   return {out,rest:list.slice(i)};
 }
-async function fetchArtists(cat,artists,want,onProg){
+async function fetchArtists(cat,artists,want,onProg,o){
   const arts=shuffle(artists.slice());const by=[];
   for(let i=0;i<arts.length&&by.length<want;i+=3){
-    const rs=await Promise.all(arts.slice(i,i+3).map(p=>artistTracks(cat,p).catch(()=>[])));
-    rs.forEach(r=>{const f=r.filter(t=>notUsed(t.title));const use=f.length>=2?f:r;if(use.length>=2)by.push(shuffle(use.slice(0,8)))});onProg&&onProg(Math.min(1,by.length/Math.max(1,want)));
+    const rs=await Promise.all(arts.slice(i,i+3).map(p=>artistTracks(cat,p,o).catch(()=>[])));
+    rs.forEach(r=>{const f=r.filter(t=>notUsed(t.title));const use=f.length>=2?f:r;if(use.length>=2)by.push(shuffle(use.slice(0,(o&&o.max)||8)))});onProg&&onProg(Math.min(1,by.length/Math.max(1,want)));
   }
   return by;
 }
 function roundRobin(by,n){const out=[];let k=0,guard=0;while(out.length<n&&by.length&&guard<800){const l=by[k%by.length];if(l.length)out.push(l.shift());k++;guard++;if(by.every(x=>!x.length))break}return out}
 async function prepareTracks(cat,n,onProg){
+  const dp=DEPTHS[S.depth]||DEPTHS.mix;
+  if(cat.type==='song'&&cat.more&&S.depth!=='hits'){
+    const nDeep=S.depth==='deep'?Math.round(n*0.8):Math.floor(n/2),nHits=n-nDeep;
+    let list=shuffle(cat.list.filter(e=>notUsed(e[0])));if(list.length<nHits)list=shuffle(cat.list.slice());
+    const hits=await fetchSongs(cat,list,Math.min(nHits,4),f=>onProg(f*0.4));
+    const pairs=[];const seenA=new Set();cat.list.forEach(e=>{const k=e[1].toLowerCase();if(!seenA.has(k)){seenA.add(k);pairs.push([e[1],e[2]||e[1]])}});cat.more.forEach(a=>{const k=a[0].toLowerCase();if(!seenA.has(k)){seenA.add(k);pairs.push(a)}});
+    const curated=new Set(cat.list.map(e=>norm(cleanTitle(e[0]))));
+    const by=(await fetchArtists(cat,pairs,Math.min(pairs.length,Math.ceil(nDeep/2)+2),f=>onProg(0.4+f*0.6),{max:dp.max,skip:dp.skip})).map(l=>l.filter(t=>!curated.has(norm(t.title)))).filter(l=>l.length);
+    const deepPool=[];by.forEach(l=>l.forEach(t=>deepPool.push(t.opt)));
+    const deep=roundRobin(by.map(l=>l.slice(0,3)),nDeep);
+    const sched=shuffle(Array(nHits).fill('en').concat(Array(Math.max(0,n-nHits)).fill('il')));
+    return {tracks:[],q:{en:hits.out,il:deep},sched,pool:cat.list.map(e=>({t:cleanTitle(e[0]),a:e[1]})).concat(deepPool),rest:hits.rest,ok:hits.out.length+deep.length};
+  }
   if(cat.type==='song'){
     let list=shuffle(cat.list.filter(e=>notUsed(e[0])));if(list.length<n)list=shuffle(cat.list.slice());
     const {out,rest}=await fetchSongs(cat,list,Math.min(n,6),onProg);
     return {tracks:out,pool:cat.list.map(e=>({t:cleanTitle(e[0]),a:e[1]})),rest};
   }else if(cat.type==='artist'){
-    const by=await fetchArtists(cat,cat.artists,Math.min(cat.artists.length,8),onProg);
+    const by=await fetchArtists(cat,cat.artists,Math.min(cat.artists.length,10),onProg,{max:dp.max,skip:dp.skip});
     const pool=[];by.forEach(l=>l.forEach(t=>pool.push(t.opt)));
     return {tracks:roundRobin(by,n),pool,rest:[]};
   }else{
     const nIL=Math.max(1,Math.round(n*0.4)),nEN=n-nIL;
     let list=shuffle(cat.list.filter(e=>notUsed(e[0])));if(list.length<nEN)list=shuffle(cat.list.slice());
     const en=await fetchSongs(cat,list,Math.min(nEN,5),f=>onProg(f*0.5));
-    const by=await fetchArtists({country:'IL'},cat.artists,Math.min(cat.artists.length,Math.ceil(nIL/2)+1),f=>onProg(0.5+f*0.5));
+    const by=await fetchArtists({country:'IL'},cat.artists,Math.min(cat.artists.length,Math.ceil(nIL/2)+1),f=>onProg(0.5+f*0.5),{max:dp.max,skip:dp.skip});
     const ilPool=[];by.forEach(l=>l.forEach(t=>ilPool.push(t.opt)));
     const il=roundRobin(by.map(l=>l.slice(0,2)),nIL);
     const sched=shuffle(Array(nEN).fill('en').concat(Array(nIL).fill('il')));
@@ -745,7 +795,7 @@ async function createRoom(){
   for(const url of BROKERS){try{client=await connectBroker(url);break}catch(e){client=null}}
   if(!client){showScreen('home');$('#homeErr').textContent='אין חיבור לשרת. בדקו אינטרנט ונסו שוב.';return}
   isHost=true;client.on('message',onMsg);client.subscribe([base+'/act',base+'/fx',base+'/photo/+']);pubPhoto();
-  S={gid:rid(6),v:0,code,host:me.id,phase:'lobby',cat:null,players:[],order:[],turn:0,log:[],diff:'med',seriesLen:3,perGame:15,series:{games:[],names:{}}};
+  S={gid:rid(6),v:0,code,host:me.id,phase:'lobby',cat:null,players:[],order:[],turn:0,log:[],diff:'med',depth:'mix',seriesLen:3,perGame:15,series:{games:[],names:{}}};
   addPlayer(me.id,me.name);location.hash=code;
   hostTimer=setInterval(hostTick,300);broadcast();
 }
@@ -932,6 +982,7 @@ function renderLobby(){
   $('#diffSeg').innerHTML=Object.keys(DIFFS).map(k=>{const d=DIFFS[k];return `<button class="dbtn ${S.diff===k?'on':''}" data-diff="${k}"><b>${d.icon} ${d.label}</b>${d.desc}</button>`}).join('')+`<button class="dbtn wide ${S.diff==='stairs'?'on':''}" data-diff="stairs"><b>📈 מדרגות</b>כל משחק בסדרה קשה יותר: קל ← בינוני ← קשה ← אלוף</button>`;
   $('#seriesSeg').className='seg'+(lockSet?' ro':'');$('#seriesSeg').innerHTML=[1,3,5].map(n=>`<button class="${S.seriesLen===n?'on':''}" data-sl="${n}">${n}</button>`).join('');
   $('#perSeg').className='seg'+(lockSet?' ro':'');$('#perSeg').innerHTML=[10,15,20].map(n=>`<button class="${S.perGame===n?'on':''}" data-pg="${n}">${n}</button>`).join('');
+  $('#depthSeg').className='dgrid three'+(lockSet?' ro':'');$('#depthSeg').innerHTML=Object.keys(DEPTHS).map(k=>{const d=DEPTHS[k];return `<button class="dbtn ${(S.depth||'mix')===k?'on':''}" data-depth="${k}"><b>${d.icon} ${d.label}</b>${d.desc}</button>`}).join('');
   const nd=DIFFS[gameDiff()];
   $('#seriesInfo').innerHTML=played?`🏁 משחק <b>${played+1}</b> מתוך ${S.seriesLen} · רמה: ${nd.icon} ${nd.label}`:'';
   $('#goSub').textContent=`${S.perGame} שירים · ${nd.icon} ${nd.label}`+(S.seriesLen>1?` · משחק ${played+1}/${S.seriesLen}`:'');
@@ -1074,7 +1125,8 @@ document.addEventListener('click',e=>{
   if(isHost&&S&&S.phase==='lobby'&&!(S.series&&S.series.games.length)){
     const dd=e.target.closest('[data-diff]');if(dd){S.diff=dd.dataset.diff;sfx.click();broadcast()}
     const sl=e.target.closest('[data-sl]');if(sl){S.seriesLen=+sl.dataset.sl;sfx.click();broadcast()}
-    const pg=e.target.closest('[data-pg]');if(pg){S.perGame=+pg.dataset.pg;sfx.click();broadcast()}}
+    const pg=e.target.closest('[data-pg]');if(pg){S.perGame=+pg.dataset.pg;sfx.click();broadcast()}
+    const dpb=e.target.closest('[data-depth]');if(dpb){S.depth=dpb.dataset.depth;sfx.click();broadcast()}}
   const mcb=e.target.closest('#mcBox button');if(mcb&&S&&S.mc&&S.phase==='turn'&&!(S.done&&S.done[me.id])&&L.myPick==null){L.myPick=+mcb.dataset.i;mcb.classList.add('picked');$('#changeAns').classList.remove('hidden');$('#mcBox').classList.add('locked');sfx.click();send({type:'answer',idx:+mcb.dataset.i})}
   const hbt=e.target.closest('#helpOpts button');if(hbt&&S&&helpFor){send({type:'helpReply',forId:helpFor,idx:+hbt.dataset.i});$('#helpModal').classList.remove('on');toast('העזרה נשלחה!')}
   const rb=e.target.closest('#reactBar button');if(rb){const d={e:rb.dataset.e,n:me.name};pub('/fx',d);if(!client)flyReaction(d)}
