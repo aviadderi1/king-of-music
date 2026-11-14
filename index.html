@@ -228,6 +228,11 @@ body.has3d{background:#0b0520}
 .voted .v.pop .ph{animation:vpop .5s cubic-bezier(.3,1.8,.5,1)}
 @keyframes vpop{0%{transform:scale(.6)}100%{transform:scale(1)}}
 .cam-btn{margin-right:auto;font-size:12px;border:1.5px dashed var(--gold);color:var(--gold);border-radius:12px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+.tools-row{display:flex;gap:8px;margin-top:8px}
+.tools-row .small-btn{padding:6px 12px;font-size:13px}
+.new-game-btn{border-color:var(--gold)!important;color:var(--gold)}
+.my-name{cursor:pointer;border-bottom:1px dashed rgba(255,255,255,.4)}
+#renAv .my-av .pav,#renAv .my-av .av{width:56px;height:56px;font-size:34px}
 .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .dbtn{padding:9px 10px;border-radius:14px;background:rgba(255,255,255,.08);border:2px solid transparent;text-align:right;font-size:11.5px;color:var(--mut);line-height:1.3}
 .dbtn b{display:block;font-size:15px;color:#fff;font-family:'Secular One';font-weight:400}
@@ -298,7 +303,7 @@ body.has3d{background:#0b0520}
 
 <!-- לובי -->
 <section class="screen" id="s-lobby">
-  <div class="topbar"><button class="small-btn" id="leaveLobby">יציאה</button><span>חדר משחק</span></div>
+  <div class="topbar"><button class="small-btn" id="leaveLobby">יציאה</button><button class="small-btn ren-btn">✏️ השם שלי</button><span>חדר משחק</span></div>
   <div class="card center">
     <div class="mut">קוד החדר</div>
     <div class="code" id="roomCode">----</div>
@@ -356,6 +361,7 @@ body.has3d{background:#0b0520}
 <!-- משחק -->
 <section class="screen" id="s-game">
   <div class="topbar"><button class="small-btn" id="leaveGame">יציאה</button><span id="turnInfo"></span><span id="catInfo"></span></div>
+  <div class="tools-row"><button class="small-btn ren-btn">✏️ השם שלי</button><button class="small-btn host-only new-game-btn">🔄 משחק חדש</button></div>
   <div class="scores" id="scores"></div>
 
   <div id="turnPane">
@@ -413,6 +419,7 @@ body.has3d{background:#0b0520}
   <div class="card" id="btTable"></div>
   <button class="big-btn gold" id="btNext">למשחק הבא ←</button>
   <div class="center mut" id="btWait" style="margin-top:10px"></div>
+  <div class="tools-row" style="justify-content:center;margin-top:12px"><button class="small-btn ren-btn">✏️ השם שלי</button><button class="small-btn host-only new-game-btn">🔄 משחק חדש</button></div>
   <button class="big-btn ghost" id="btExit">יציאה</button>
 </section>
 
@@ -435,6 +442,23 @@ body.has3d{background:#0b0520}
   <div class="mc" id="helpOpts"></div>
 </div></div>
 
+<!-- שינוי שם -->
+<div class="modal keep" id="renameModal"><div class="card center">
+  <h2>השם שלך במשחק</h2>
+  <div class="row" style="margin-top:12px"><span id="renAv"></span><input class="inp" id="renInp" maxlength="14" placeholder="השם שלך" autocomplete="off" style="margin-top:0"></div>
+  <div class="mut" style="font-size:12px;margin-top:6px">הקש על התמונה כדי להחליף אותה</div>
+  <div class="err" id="renErr"></div>
+  <button class="big-btn teal" id="renSave">שמור</button>
+  <button class="big-btn ghost" id="renCancel" style="font-size:16px;padding:11px">ביטול</button>
+</div></div>
+<!-- משחק חדש -->
+<div class="modal keep" id="newGameModal"><div class="card center">
+  <div style="font-size:44px">🔄</div>
+  <h2>לעצור ולהתחיל משחק חדש?</h2>
+  <div class="mut" style="margin-top:6px">הניקוד הנוכחי יתאפס. כל השחקנים נשארים בחדר עם אותו קוד.</div>
+  <button class="big-btn gold" id="newGameYes">כן, משחק חדש</button>
+  <button class="big-btn ghost" id="newGameNo" style="font-size:16px;padding:11px">ביטול</button>
+</div></div>
 <!-- בחירת חבר -->
 <div class="modal" id="friendPick"><div class="card center">
   <h2>את מי לשאול?</h2>
@@ -620,6 +644,7 @@ async function artistTracks(cat,pair,o){
     if(!rs.length)return [];
     let good=rs.filter(x=>matchAny(x.artistName,[he,en],true));
     if(!good.length){const cnt={};rs.forEach(x=>cnt[x.artistId]=(cnt[x.artistId]||0)+1);const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];good=rs.filter(x=>String(x.artistId)===top)}
+    if(country==='IL'&&/[\u05d0-\u05ea]/.test(he))good=good.filter(x=>/[\u05d0-\u05ea]/.test(x.trackName));
     const seen=new Set();const out=[];
     for(const x of good){const k=norm(cleanTitle(x.trackName));if(!k||seen.has(k))continue;seen.add(k);out.push(x);if(out.length>=skip+max)break}
     return out.length>skip+2?out.slice(skip):out;
@@ -872,12 +897,15 @@ async function startGame(){
   S.curDiff=gameDiff();const D=DIFFS[S.curDiff];S.ansMs=D.ans;S.listen=D.listen;S.mult=D.mult;
   S.total=S.perGame||TOTAL_SONGS;S.turn=0;S.phase='loading';S.load=0;S.gid=rid(6);broadcast();
   const cat=CATS[S.cat];let res;
-  try{res=await prepareTracks(cat,S.total,f=>{S.load=f;broadcast()})}catch(e){res={tracks:[],pool:[]}}
+  const gid0=S.gid;
+  try{res=await prepareTracks(cat,S.total,f=>{if(S.gid===gid0){S.load=f;broadcast()}})}catch(e){res={tracks:[],pool:[]}}
+  if(S.gid!==gid0||S.phase!=='loading')return;
   if(!(res.ok||res.tracks.length)){S.phase='lobby';broadcast();toast('לא הצלחנו לטעון שירים. בדקו את החיבור ונסו שוב.',4000);return}
   H.tracks=res.tracks;H.pool=res.pool;H.rest=res.rest||[];H.q=res.q||null;H.sched=res.sched||null;bgFill(cat,S.total,S.gid);startTurn();
 }
 async function startTurn(){
   if(S.turn>=S.total){endGame();return}
+  const gid0=S.gid,turn0=S.turn;
   let T=H.tracks[S.turn];
   if(!T&&H.q){const kind=H.sched[S.turn]||'en';let src=kind==='il'?H.q.il:H.q.en;
     if(!src.length&&kind==='en'){while(!src.length&&H.rest.length){const r=await findSong(CATS[S.cat],H.rest.shift()).catch(()=>null);if(r)src.push(r)}}
@@ -887,6 +915,7 @@ async function startTurn(){
     while(!H.tracks[S.turn]&&H.rest&&H.rest.length){const r=await findSong(cat,H.rest.shift()).catch(()=>null);if(r)H.tracks.push(r)}
     T=H.tracks[S.turn]||H.tracks.filter(Boolean)[Math.floor(Math.random()*H.tracks.filter(Boolean).length)];H.tracks[S.turn]=T;
   }
+  if(S.gid!==gid0||S.turn!==turn0)return;
   if(!T){endGame();return}
   if(H.used)H.used.add(norm(cleanTitle(T.title)));
   H.ans={};
@@ -921,7 +950,7 @@ async function useLifeline(id,a){
 }
 function makeOptions(T){
   const he=isHe(T.opt.t);const all=shuffle(H.pool.filter(o=>norm(o.t)!==norm(T.opt.t)));
-  const same=all.filter(o=>isHe(o.t)===he);const others=same.length>=3?same.concat(all.filter(o=>isHe(o.t)!==he)):all;
+  const same=all.filter(o=>isHe(o.t)===he&&(!he||isHe(o.a)));const others=same.length>=3?same:all.filter(o=>isHe(o.t)===he).length>=3?all.filter(o=>isHe(o.t)===he):all;
   const uniq=[];
   if(DIFFS[S.curDiff]&&DIFFS[S.curDiff].similar)others.filter(o=>norm(o.a)===norm(T.opt.a)).forEach(o=>{if(uniq.length<2&&!uniq.some(u=>norm(u.t)===norm(o.t)))uniq.push(o)});
   others.forEach(o=>{if(uniq.length<3&&!uniq.some(u=>norm(u.t)===norm(o.t))&&norm(o.a)!==norm(T.opt.a))uniq.push(o)});
@@ -954,6 +983,7 @@ function endGame(){
   S.series.games.push({cat:S.cat,diff:S.curDiff,sc});
   S.endK=rid(6);S.phase=S.series.games.length>=(S.seriesLen||1)?'end':'between';broadcast();
 }
+function abortGame(){if(!isHost)return;S.gid=rid(6);S.phase='lobby';S.cat=null;S.series={games:[],names:{}};S.play=null;S.result=null;S.mc=null;S.players=S.players.filter(p=>p.on);S.players.forEach(p=>{p.score=0;p.ll=LL0()});H.tracks=[];H.q=null;H.sched=null;H.rest=[];H.used=new Set();broadcast();toast('חוזרים ללובי – משחק חדש!')}
 function nextGame(){if(!isHost||S.phase!=='between')return;unlockAudio();startGame()}
 function backToLobby(){S.phase='lobby';S.cat=null;S.series={games:[],names:{}};S.players.forEach(p=>{p.score=0});S.players=S.players.filter(p=>p.on);broadcast()}
 
@@ -962,6 +992,7 @@ function avH(p,cls,noTap){if(!p)return '';const ph=p.id===me.id?me.photo:PHOTOS[
   return (p.id===me.id&&!noTap)?`<label for="photoInp" class="my-av" title="הקש להחלפת תמונה">${inner}<span class="cam-badge">📷</span></label>`:inner}
 function chip(p,extra,st){return `<div class="pchip ${p.on?'':'off'} ${extra||''}" style="border-color:${p.col}">${avH(p)}${esc(p.name)}${p.id===S.host?' 👑':''}${S.phase!=='lobby'?`<span class="sc">${p.score}</span>`:''}${st?`<span class="st">${st}</span>`:''}</div>`}
 function render(){
+  document.querySelectorAll('.host-only').forEach(b=>b.classList.toggle('hidden',!isHost||!S));
   if(!S){$('#goWrap').classList.remove('on');showScreen(me.name?'home':'name');return}
   if(S.phase==='switch')return;
   ({lobby:renderLobby,loading:renderLoading,turn:renderGame,reveal:renderGame,end:renderEnd,between:renderBetween}[S.phase]||renderLobby)();
@@ -974,7 +1005,7 @@ function renderLobby(){
   $('#waLink').href='https://wa.me/?text='+encodeURIComponent(inviteText());$('#shareBtn').classList.toggle('hidden',!navigator.share);
   const list=S.players.slice().sort((a,b)=>(b.id===S.host)-(a.id===S.host)||(b.on-a.on));
   $('#lobbyPlayers').className='in-room';
-  $('#lobbyPlayers').innerHTML=list.map(p=>`<div class="rm ${p.on?'':'off'}"><span class="dot"></span>${avH(p,'mid')}<span>${esc(p.name)}${p.id===me.id?' (את/ה)':''}</span>${p.id===S.host?'<span class="host">👑 מארח</span>':''}${p.id===me.id&&!me.photo?'<span class="photo-hint">הקש על התמונה להוספה</span>':''}<span class="tag2">${p.on?'מחובר':'התנתק'}</span></div>`).join('');
+  $('#lobbyPlayers').innerHTML=list.map(p=>`<div class="rm ${p.on?'':'off'}"><span class="dot"></span>${avH(p,'mid')}<span class="${p.id===me.id?'my-name':''}" ${p.id===me.id?'data-ren="1"':''}>${esc(p.name)}${p.id===me.id?' (את/ה) ✏️':''}</span>${p.id===S.host?'<span class="host">👑 מארח</span>':''}${p.id===me.id&&!me.photo?'<span class="photo-hint">הקש על התמונה להוספה</span>':''}<span class="tag2">${p.on?'מחובר':'התנתק'}</span></div>`).join('');
   $('#pCount').textContent='('+S.players.filter(p=>p.on).length+')';
   $('#catsTop').innerHTML=catBtn(ALLCAT);$('#catsTheme').innerHTML=THEMES.map(catBtn).join('');$('#catsMix').innerHTML=MIXES.map(catBtn).join('');$('#catsIntl').innerHTML=INTL.map(catBtn).join('');$('#catsIl').innerHTML=ISR.map(catBtn).join('');
   const played=(S.series&&S.series.games.length)||0;const lockSet=!isHost||played>0;
@@ -1089,7 +1120,7 @@ function renderEnd(){
   $('#againBtn').textContent=multi?'סדרה חדשה':'עוד משחק';
   $('#againBtn').classList.toggle('hidden',!isHost);
 }
-function closeModals(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on'));if(!S||S.phase!=='lobby')$('#goWrap').classList.remove('on')}
+function closeModals(){document.querySelectorAll('.modal:not(.keep)').forEach(m=>m.classList.remove('on'));if(!S||S.phase!=='lobby')$('#goWrap').classList.remove('on')}
 let helpIv=null,helpFor=null;
 function openHelp(fromP,fid,h){
   helpFor=fid;$('#helpTitle').textContent=fromP.name+' צריך/ה את העזרה שלך!';$('#helpOpts').innerHTML=optsHTML(S.mc||[],(S.rm&&S.rm[fid])||[]);$('#helpModal').classList.add('on');sfx.ll();
@@ -1118,7 +1149,7 @@ $('#goChange').onclick=()=>{if(isHost){S.cat=null;broadcast()}};
 function showMyPhoto(){const pp=$('#photoPick');pp.querySelectorAll('img').forEach(i=>i.remove());if(me.photo){const im=new Image();im.src=me.photo;pp.appendChild(im);pp.classList.add('has')}else pp.classList.remove('has');$('#homeAv').innerHTML=`<label for="photoInp" class="my-av">${me.photo?`<img class="pav mid" src="${me.photo}" alt="">`:'<span class="av mid">🙂</span>'}<span class="cam-badge">📷</span></label>`}
 function pubPhoto(){if(client&&base)try{client.publish(base+'/photo/'+me.id,me.photo||'',{qos:1,retain:true})}catch(e){}}
 $('#photoInp').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const url=URL.createObjectURL(f);const img=new Image();
-  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const m=Math.min(img.naturalWidth,img.naturalHeight);g.drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2,m,m,0,0,128,128);me.photo=c.toDataURL('image/jpeg',0.75);LS.set('nhh_photo',me.photo);URL.revokeObjectURL(url);showMyPhoto();pubPhoto();sfx.ll();toast('התמונה נשמרה!');if(S)render()};
+  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const m=Math.min(img.naturalWidth,img.naturalHeight);g.drawImage(img,(img.naturalWidth-m)/2,(img.naturalHeight-m)/2,m,m,0,0,128,128);me.photo=c.toDataURL('image/jpeg',0.75);LS.set('nhh_photo',me.photo);URL.revokeObjectURL(url);showMyPhoto();pubPhoto();sfx.ll();toast('התמונה נשמרה!');if($('#renameModal').classList.contains('on'))$('#renAv').innerHTML=avH({id:me.id,av:'🙂'});if(S)render()};
   img.onerror=()=>{URL.revokeObjectURL(url);toast('לא הצלחנו לקרוא את התמונה. נסו תמונה אחרת.')};img.src=url;e.target.value=''});
 document.addEventListener('click',e=>{
   const c=e.target.closest('.cat');if(c&&isHost&&S&&S.phase==='lobby'){S.cat=c.dataset.cat;sfx.click();broadcast()}
@@ -1144,6 +1175,12 @@ $('#friendCancel').onclick=()=>$('#friendPick').classList.remove('on');
 $('#replayBtn').onclick=()=>{if(S&&S.play)playSeg(S.play.url,S.play.start,S.play.len)};
 $('#tapAudio').onclick=()=>{aud.play().catch(()=>{})};
 $('#changeAns').onclick=()=>{if(!S||S.phase!=='turn')return;L.myPick=null;L.mcK=null;sfx.click();$('#mcBox').classList.remove('locked');$('#changeAns').classList.add('hidden');$('#mcBox').querySelectorAll('.picked').forEach(b=>b.classList.remove('picked'));send({type:'unanswer'})};
+function openRename(){$('#renInp').value=me.name;$('#renErr').textContent='';$('#renAv').innerHTML=avH({id:me.id,av:'🙂'});$('#renameModal').classList.add('on');setTimeout(()=>{try{$('#renInp').focus()}catch(e){}},200)}
+function saveRename(){const n=$('#renInp').value.trim();if(n.length<2){$('#renErr').textContent='צריך לפחות 2 אותיות';return}me.name=n;LS.set('nhh_name',n);$('#homeName').textContent=n;$('#renameModal').classList.remove('on');sfx.click();if(S)send({type:'hello',name:n});toast('השם עודכן ל'+n)}
+document.addEventListener('click',e=>{if(e.target.closest('.ren-btn')||e.target.closest('[data-ren]'))openRename();if(e.target.closest('.new-game-btn')&&isHost)$('#newGameModal').classList.add('on')});
+$('#renSave').onclick=saveRename;$('#renCancel').onclick=()=>$('#renameModal').classList.remove('on');
+$('#renInp').addEventListener('keydown',e=>{if(e.key==='Enter')saveRename()});$('#renInp').addEventListener('input',()=>$('#renErr').textContent='');
+$('#newGameYes').onclick=()=>{$('#newGameModal').classList.remove('on');stopAudio();abortGame()};$('#newGameNo').onclick=()=>$('#newGameModal').classList.remove('on');
 $('#nextBtn').onclick=()=>{sfx.click();send({type:'next'})};
 window.addEventListener('beforeunload',()=>{if(isHost&&client)pub('/state',null,true)});
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
