@@ -94,6 +94,8 @@ input{font-family:inherit}
 .ll.active{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
 .pchip .st{font-size:13px}
 .mc.locked button{pointer-events:none}
+.change-btn{display:block;margin:12px auto 0;background:rgba(255,255,255,.1);border:1.5px solid var(--gold);color:var(--gold);border-radius:14px;padding:10px 18px;font-size:15px;font-weight:500;animation:popIn .35s ease}
+.change-btn.hidden{display:none}
 .mc.locked button:not(.picked){opacity:.45}
 .rv-rows{margin-top:10px;text-align:right}
 .rv-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.07);margin-top:6px;font-size:14px}
@@ -310,6 +312,7 @@ body.has3d{background:#0b0520}
       <button class="big-btn pink tap-audio" id="tapAudio">הקש כדי לשמוע</button>
       <div id="ansArea">
         <div class="mc" id="mcBox"></div>
+        <button class="change-btn hidden" id="changeAns">↩ התחרטתי – שנה תשובה</button>
         <div class="lls" id="lls">
           <button class="ll" data-ll="half"><span class="ic">✂️</span>50:50</button>
           <button class="ll" data-ll="more"><span class="ic">🎵</span>עוד שיר</button>
@@ -688,6 +691,7 @@ function handleAction(from,a){
       if(Date.now()>myDeadline(from)+1500)break;
       H.ans[from]={idx:a.idx,at:Date.now()};S.done[from]=true;
       if(allDone())endRound();else broadcast();break}
+    case 'unanswer':if(S.phase==='turn'&&S.done[from]===true&&Date.now()<=myDeadline(from)){delete S.done[from];delete H.ans[from];broadcast()}break;
     case 'll':if(S.phase==='turn'&&!S.done[from])useLifeline(from,a);break;
     case 'helpReply':{const h=S.helps&&S.helps[a.forId];
       if(S.phase==='turn'&&h&&h.to===from&&h.reply==null&&S.mc&&S.mc[a.idx]){h.reply=a.idx;broadcast()}break}
@@ -811,7 +815,8 @@ function renderGame(){
   const myRm=(S.rm&&S.rm[me.id])||[];
   const mk=tk+'|'+myRm.join(',')+'|'+(done?1:0);
   if(L.mcK!==mk){L.mcK=mk;$('#mcBox').innerHTML=optsHTML(S.mc||[],myRm);if(L.myPick!=null){const b=$('#mcBox button[data-i="'+L.myPick+'"]');if(b)b.classList.add('picked')}}
-  $('#mcBox').classList.toggle('locked',!!done);
+  $('#mcBox').classList.toggle('locked',!!done||L.myPick!=null);
+  $('#changeAns').classList.toggle('hidden',!(done===true||(L.myPick!=null&&!done)));
   const p=pById(me.id);
   document.querySelectorAll('.ll').forEach(b=>{const k=b.dataset.ll;let used=!(p&&p.ll[k])||!!done;if(k==='friend'&&!S.players.some(x=>x.on&&x.id!==me.id))used=true;b.classList.toggle('used',used&&!(k==='dbl'&&S.dbl&&S.dbl[me.id]));b.classList.toggle('active',k==='dbl'&&!!(S.dbl&&S.dbl[me.id]))});
   let hb='';const h=S.helps&&S.helps[me.id];
@@ -891,7 +896,7 @@ $('#photoInp').addEventListener('change',e=>{const f=e.target.files&&e.target.fi
   img.onerror=()=>{URL.revokeObjectURL(url);toast('לא הצלחנו לקרוא את התמונה. נסו תמונה אחרת.')};img.src=url;e.target.value=''});
 document.addEventListener('click',e=>{
   const c=e.target.closest('.cat');if(c&&isHost&&S&&S.phase==='lobby'){S.cat=c.dataset.cat;sfx.click();broadcast()}
-  const mcb=e.target.closest('#mcBox button');if(mcb&&S&&S.mc&&S.phase==='turn'&&!(S.done&&S.done[me.id])&&L.myPick==null){L.myPick=+mcb.dataset.i;mcb.classList.add('picked');$('#mcBox').classList.add('locked');sfx.click();send({type:'answer',idx:+mcb.dataset.i})}
+  const mcb=e.target.closest('#mcBox button');if(mcb&&S&&S.mc&&S.phase==='turn'&&!(S.done&&S.done[me.id])&&L.myPick==null){L.myPick=+mcb.dataset.i;mcb.classList.add('picked');$('#changeAns').classList.remove('hidden');$('#mcBox').classList.add('locked');sfx.click();send({type:'answer',idx:+mcb.dataset.i})}
   const hbt=e.target.closest('#helpOpts button');if(hbt&&S&&helpFor){send({type:'helpReply',forId:helpFor,idx:+hbt.dataset.i});$('#helpModal').classList.remove('on');toast('העזרה נשלחה!')}
   const rb=e.target.closest('#reactBar button');if(rb){const d={e:rb.dataset.e,n:me.name};pub('/fx',d);if(!client)flyReaction(d)}
   const fb=e.target.closest('#friendList .pchip');if(fb){$('#friendPick').classList.remove('on');sfx.ll();send({type:'ll',kind:'friend',to:fb.dataset.id})}
@@ -906,6 +911,7 @@ document.querySelectorAll('.ll').forEach(b=>b.onclick=()=>{
 $('#friendCancel').onclick=()=>$('#friendPick').classList.remove('on');
 $('#replayBtn').onclick=()=>{if(S&&S.play)playUrl(S.play.url)};
 $('#tapAudio').onclick=()=>{aud.play().catch(()=>{})};
+$('#changeAns').onclick=()=>{if(!S||S.phase!=='turn')return;L.myPick=null;L.mcK=null;sfx.click();$('#mcBox').classList.remove('locked');$('#changeAns').classList.add('hidden');$('#mcBox').querySelectorAll('.picked').forEach(b=>b.classList.remove('picked'));send({type:'unanswer'})};
 $('#nextBtn').onclick=()=>{sfx.click();send({type:'next'})};
 window.addEventListener('beforeunload',()=>{if(isHost&&client)pub('/state',null,true)});
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
